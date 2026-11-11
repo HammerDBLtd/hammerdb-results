@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Add comments · HammerDB Benchmark Leaderboard</title>
+  <script>
+    (() => {
+      let preference="system";
+      try { preference=localStorage.getItem("hammerdb-results-theme")||"system"; } catch(e){}
+      const dark=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches;
+      document.documentElement.dataset.theme = preference==="dark"||preference==="light"
+        ? preference : dark?"dark":"light";
+    })();
+  </script>
+  <script src="repository.js"></script>
+  <link rel="stylesheet" href="leaderboard.css">
+  <style>
+    .annotate-page{max-width:920px;padding:22px 24px 60px;margin:auto}
+    .annotate-header,.annotate-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;margin:0 0 18px}
+    .annotate-header h1{font-size:clamp(26px,3.5vw,35px);letter-spacing:-.04em;margin:0 0 8px}
+    .annotate-header p,.annotate-help{color:var(--muted);font-size:13px;line-height:1.6;margin:0}
+    .annotate-card h2{font-size:20px;letter-spacing:-.02em;margin:0 0 8px}
+    .annotate-meta{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+    .annotate-meta>div{background:var(--surface-soft);border:1px solid var(--border);border-radius:10px;padding:13px}
+    .annotate-meta span{display:block;font-size:10px;color:var(--muted);font-weight:850;letter-spacing:.08em}
+    .annotate-meta strong{display:block;word-break:break-word;margin-top:4px}
+    .annotate-fields{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}
+    .annotate-field{display:flex;flex-direction:column;gap:7px;margin-bottom:13px}
+    .annotate-field label{font-weight:780;font-size:13px}
+    .annotate-field input,.annotate-field textarea{background:var(--surface-soft);border:1px solid var(--border);border-radius:9px;padding:11px;color:var(--text);width:100%;font:inherit;min-height:45px}
+    .annotate-field textarea{min-height:105px;resize:vertical}
+    .annotate-field .help{font-size:12px;color:var(--muted)}
+    .previous-note{white-space:pre-wrap;overflow-wrap:anywhere;border-left:3px solid var(--accent);padding:10px 12px;background:var(--surface-soft);border-radius:0 9px 9px 0;font-size:13px;margin:10px 0}
+    .annotate-submit{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px}
+    .annotate-submit button{cursor:pointer;border-radius:10px;padding:12px 17px;font-weight:850}
+    .annotate-submit button:first-child{background:linear-gradient(100deg,#457fea,#8052d3);color:#fff;border:0}
+    .annotate-submit button:last-child{background:var(--surface-soft);color:var(--text);border:1px solid var(--border)}
+    .annotate-status{color:var(--muted);font-size:13px;padding:15px;border:1px solid var(--border);border-radius:10px;background:var(--surface-soft);margin:14px 0}
+    .annotate-status.error{border-color:#e86a78}
+    .annotate-status.success{border-color:#25ad80}
+    .annotate-preview{margin-top:16px}
+    .annotate-preview summary{font-size:13px;font-weight:800;cursor:pointer;color:var(--accent)}
+    .annotate-preview pre{font-size:12px;overflow:auto;max-height:300px;padding:14px;border-radius:8px;background:var(--surface-soft);white-space:pre-wrap;overflow-wrap:anywhere}
+    .annotate-link{font-size:13px;font-weight:800}
+    #form-container[hidden]{display:none!important}
+    @media(max-width:660px){.annotate-meta,.annotate-fields{grid-template-columns:1fr}.annotate-page{padding-inline:14px}.annotate-header,.annotate-card{padding:18px}}
+  </style>
+</head>
+<body>
+<header class="topbar"><div class="topbar-inner"><div class="topbar-actions">
+  <a class="nav-link" href="index.html">← Leaderboard</a>
+  <label class="theme-control" for="theme-select"><span>Theme</span>
+    <select id="theme-select" class="theme-select" aria-label="Colour theme">
+      <option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option>
+    </select>
+  </label>
+</div></div></header>
+<main class="annotate-page">
+  <section class="annotate-header">
+    <h1>Comments and company details</h1>
+    <p>Original submitters can add notes or update their company information after publication.
+      Benchmark measurements stay unchanged. Changes are proposed through a pull request to
+      <strong data-repository-name>the hosting repository</strong>.</p>
+  </section>
+  <div id="annotate-status" class="annotate-status" role="status" aria-live="polite">Loading published result…</div>
+  <div id="form-container" hidden>
+    <section class="annotate-card">
+      <h2>Original submission</h2>
+      <div class="annotate-meta">
+        <div><span>RESULT</span><strong id="result-label"></strong></div>
+        <div><span>ORIGINAL GITHUB SUBMITTER</span><strong id="result-submitter"></strong></div>
+      </div>
+      <p class="annotate-help" style="margin-top:13px">Only a pull request opened by the original GitHub submitter can update these details. GitHub Actions will verify the PR author's account.</p>
+      <div id="prior-notes" hidden>
+        <h3 style="font-size:14px;margin:18px 0 4px">Existing submitter comments</h3>
+        <div id="prior-comments"></div>
+      </div>
+      <div id="pr-notes" hidden>
+        <h3 style="font-size:14px;margin:18px 0 4px">Original pull request description</h3>
+        <p class="previous-note" id="original-pr-description"></p>
+      </div>
+    </section>
+    <section class="annotate-card">
+      <h2>Add information</h2>
+      <p class="annotate-help">All fields are optional, but at least one new comment or company detail is required. Previous comments are preserved.</p>
+      <div class="annotate-fields">
+        <div class="annotate-field"><label for="company-name">Company / organisation</label><input id="company-name" maxlength="120" placeholder="Organisation name"></div>
+        <div class="annotate-field"><label for="company-logo">Company logo (public HTTPS URL)</label><input id="company-logo" type="url" maxlength="500" placeholder="https://example.com/logo.png"></div>
+      </div>
+      <div class="annotate-field"><label for="company-description">Company description</label>
+        <textarea id="company-description" maxlength="350" placeholder="Short description of your organisation"></textarea></div>
+      <div class="annotate-field"><label for="new-comment">Additional benchmark comments</label>
+        <textarea id="new-comment" maxlength="4000" placeholder="Explain your configuration, environment, observations or details omitted from the original pull request."></textarea>
+        <div class="help">This is an additional comment from the submitter. It is not part of the measured benchmark data.</div>
+      </div>
+      <div class="annotate-submit">
+        <button type="button" id="send-github">Copy JSON and continue to GitHub</button>
+        <button type="button" id="copy-json">Copy JSON only</button>
+      </div>
+      <p class="annotate-help" style="margin-top:12px">GitHub opens the file editor. Paste the copied JSON, commit it to a branch or fork, and open a pull request against <strong data-repository-name>the hosting repository</strong>. If an annotation already exists, replace its contents in the editor. <strong>No changes are submitted automatically.</strong></p>
+      <p id="github-target" style="margin-top:10px"><a class="annotate-link" id="github-editor-link" href="#" target="_blank" rel="noopener noreferrer">Open GitHub editor</a></p>
+      <details class="annotate-preview"><summary>Review the JSON to paste</summary><pre id="annotation-preview"></pre></details>
+    </section>
+  </div>
+</main>
+<script>
+(() => {
+  "use strict";
+  const $=(id)=>document.getElementById(id);
+  const target=window.HammerDBResultsRepo;
+  const params=new URLSearchParams(location.search);
+  const jobid=params.get("jobid");
+  const media=window.matchMedia?window.matchMedia("(prefers-color-scheme: dark)"):null;
+  function themeChoice(){try{return localStorage.getItem("hammerdb-results-theme")||"system";}catch(e){return "system";}}
+  function theme(choice){
+    const c=["system","light","dark"].includes(choice)?choice:"system";
+    document.documentElement.dataset.theme=c==="system"?(media?.matches?"dark":"light"):c;
+    $("theme-select").value=c;
+  }
+  theme(themeChoice());
+  $("theme-select").addEventListener("change",(e)=>{
+    const c=e.target.value;
+    try {if(c==="system")localStorage.removeItem("hammerdb-results-theme");else localStorage.setItem("hammerdb-results-theme",c);}catch(e){}
+    theme(c);
+  });
+  media?.addEventListener?.("change",()=>{if(themeChoice()==="system")theme("system");});
+  let row=null;
+  function status(message,kind){
+    $("annotate-status").textContent=message;
+    $("annotate-status").className="annotate-status"+(kind?" "+kind:"");
+  }
+  function safeHttps(raw){
+    try {
+      const url=new URL(raw);
+      return url.protocol==="https:"&&!url.username&&!url.password?url.href:null;
+    }catch(e){return null;}
+  }
+  const idValid=typeof jobid==="string"&&/^[a-z0-9_-]{5,80}$/i.test(jobid);
+  if(!idValid){status("Invalid or missing benchmark job ID.","error");return;}
+  function addNote(container,text){
+    const p=document.createElement("p");
+    p.className="previous-note";
+    p.textContent=text;
+    container.appendChild(p);
+  }
+  function githubEditorPath(result){
+    const filename="submissions/annotations/"+result.jobid+".json";
+    const root=target.url+"/"+(result.annotation_exists?"edit":"new")+"/"+target.branch;
+    return root+(result.annotation_exists?"/"+filename:"?filename="+encodeURIComponent(filename));
+  }
+  function makeAnnotation(){
+    if(!row)throw Error("Result details have not loaded.");
+    const name=$("company-name").value.trim();
+    const logo=$("company-logo").value.trim();
+    const companyDescription=$("company-description").value.trim();
+    const comment=$("new-comment").value.trim();
+    const comments=Array.isArray(row.submitter_comments)?row.submitter_comments.slice():[];
+    if(comment)comments.push(comment);
+    if(comments.length>30)throw Error("Maximum 30 comments; consolidate notes before adding more.");
+    if(logo&&!safeHttps(logo))throw Error("Company logo must be a public HTTPS URL.");
+    if(logo&&!name)throw Error("Provide a company name when including its logo.");
+    if(!comments.length&&!name&&!companyDescription)throw Error("Add a comment or company information.");
+    return JSON.stringify({
+      jobid:row.jobid,
+      github_username:row.submitted_by,
+      company:{name,logo_url:logo?safeHttps(logo):"",description:companyDescription},
+      comments
+    },null,2)+"\n";
+  }
+  function refreshPreview(){
+    if(!row)return;
+    try{$("annotation-preview").textContent=makeAnnotation();}
+    catch(e){$("annotation-preview").textContent=e.message;}
+  }
+  async function copyOnly(){
+    let json;
+    try{json=makeAnnotation();}catch(e){status(e.message,"error");return false;}
+    $("annotation-preview").textContent=json;
+    try{
+      await navigator.clipboard.writeText(json);
+      status("JSON copied. Paste it into the GitHub editor and open your pull request.","success");
+      return true;
+    }catch(e){
+      document.querySelector(".annotate-preview").open=true;
+      status("Clipboard not available. Copy the JSON manually from the expanded preview.","error");
+      return false;
+    }
+  }
+  $("copy-json").addEventListener("click",copyOnly);
+  $("send-github").addEventListener("click",async()=>{
+    try{makeAnnotation();}catch(e){status(e.message,"error");return;}
+    const url=$("github-editor-link").href;
+    window.open(url,"_blank","noopener"); // direct gesture avoids popup blocking
+    await copyOnly();
+  });
+  ["company-name","company-logo","company-description","new-comment"].forEach(id=>$(id).addEventListener("input",refreshPreview));
+  fetch("leaderboard.json",{cache:"force-cache"})
+    .then(r=>{if(!r.ok)throw Error("Leaderboard unavailable (HTTP "+r.status+")");return r.json();})
+    .then(data=>{
+      row=Array.isArray(data.rows)?data.rows.find(x=>x.jobid===jobid):null;
+      if(!row)throw Error("Result not found on this leaderboard.");
+      if(!row.submitted_by||!/^[a-z0-9](?:[a-z0-9-]{0,37}[a-z0-9])?$/i.test(row.submitted_by))
+        throw Error("Original GitHub submitter is not recorded. An annotation cannot be attributed.");
+      $("result-label").textContent=(row.database_display||row.database||"Database")+" · "+row.benchmark+" · "+row.jobid;
+      $("result-submitter").textContent="@"+row.submitted_by;
+      $("company-name").value=row.company_name||"";
+      $("company-logo").value=row.company_logo_url||"";
+      $("company-description").value=row.company_description||"";
+      if(Array.isArray(row.submitter_comments)&&row.submitter_comments.length){
+        $("prior-notes").hidden=false;
+        row.submitter_comments.forEach(x=>addNote($("prior-comments"),x));
+      }
+      if(row.original_pr_description){
+        $("pr-notes").hidden=false;
+        $("original-pr-description").textContent=row.original_pr_description;
+      }
+      $("github-editor-link").href=githubEditorPath(row);
+      $("github-editor-link").textContent="Open "+target.fullName+" on GitHub";
+      $("form-container").hidden=false;
+      status("Result found. Only @"+row.submitted_by+" can have an annotation PR accepted.","success");
+      refreshPreview();
+    }).catch(e=>status(e.message,"error"));
+})();
+</script>
+</body>
+</html>
