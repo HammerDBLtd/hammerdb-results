@@ -59,3 +59,12 @@ table th,table td{border-bottom-color:var(--line)}
 .chart-key{font-size:11px;line-height:1.5;color:var(--muted);margin:2px 8px 10px}
 .chart-key[hidden]{display:none!important}
 .percentile-box{cursor:help}
+
+/* System theme selector and readable chart labels */
+.theme-control{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);font-weight:750}
+.theme-select{min-height:39px;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:8px 10px;cursor:pointer}
+.theme-select:focus-visible{outline:2px solid #71b6f5}
+.chart-box{height:294px}
+.native-report-chart{height:100%;width:100%;display:block}
+.grid2>section{padding:14px 14px 8px}
+@media(max-width:590px){.theme-control>span{display:none}.theme-select{min-height:35px;padding:7px}.chart-box{height:258px}}

@@ -1,8 +1,18 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <script>
+      (() => {
+        let pref="system";
+        try { pref=localStorage.getItem("hammerdb-results-theme") || "system"; } catch(e) {}
+        const dark=window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches;
+        document.documentElement.dataset.theme =
+          pref==="light" || pref==="dark" ? pref : (dark ? "dark" : "light");
+      })();
+    </script>
     <title>HammerDB Result Artifact</title>
     <style>
       :root {
@@ -191,7 +201,7 @@
           <a href="https://www.hammerdb.com/" class="report-white-logo" target="_blank" rel="noopener noreferrer"><img src="assets/images/hammerDB-H-logo-FINAL.png" alt="HammerDB"></a>
           <strong class="report-title">HammerDB Benchmark Report</strong>
           <a href="https://www.tpc.org/" class="report-white-logo" target="_blank" rel="noopener noreferrer"><img src="assets/images/tpclogo.png" alt="TPC"></a>
-        </div><button type="button" id="report-theme-toggle" class="report-theme-toggle">☀ Light mode</button>
+        </div><label class="theme-control" for="theme-select"><span>Theme</span><select id="theme-select" class="theme-select" aria-label="Colour theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
       </div>
     </nav>
     <main class="wrap">
@@ -288,10 +298,6 @@
             <pre id="raw"></pre>
           </details>
         </section>
-        <section class="card" aria-label="Benchmark comparability statement">
-          <h2>Benchmark comparability</h2>
-          <p>HammerDB artifacts are best used for directional analysis and configuration learning. They are not designed to provide the same level of methodological control, disclosure depth, or comparability as formal TPC benchmark publications, and cross-system conclusions require full configuration and methodology review.</p>
-        </section>
       </div>
     </main>
     <script>
@@ -345,18 +351,29 @@
               : d.toISOString().slice(11, 19);
           };
 
-        function reportTheme(value) {
-          const mode = value === "light" ? "light" : "dark";
-          document.documentElement.dataset.theme = mode;
-          $("report-theme-toggle").textContent = mode === "dark" ? "☀ Light mode" : "☾ Dark mode";
-          for (const id of Object.keys(charts)) drawNativeChart(id, charts[id]);
+        const colourMedia = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+        function themeChoice() {
+          try { return localStorage.getItem("hammerdb-results-theme") || "system"; }
+          catch (e) { return "system"; }
         }
-        try { reportTheme(localStorage.getItem("hammerdb-results-theme") || "dark"); }
-        catch { reportTheme("dark"); }
-        $("report-theme-toggle").addEventListener("click", () => {
-          const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
-          reportTheme(next);
-          try { localStorage.setItem("hammerdb-results-theme", next); } catch {}
+        function reportTheme(value) {
+          const selected = ["system","light","dark"].includes(value) ? value : "system";
+          document.documentElement.dataset.theme = selected==="system" ? (colourMedia?.matches ? "dark" : "light") : selected;
+          $("theme-select").value = selected;
+          // Only redraw charts that have entered the viewport.
+          for (const id of Object.keys(charts)) {
+            if ($(id)?.parentElement?.querySelector("svg.native-report-chart")) drawNativeChart(id, charts[id]);
+          }
+        }
+        reportTheme(themeChoice());
+        $("theme-select").addEventListener("change",(event)=>{
+          const choice=event.target.value;
+          try { if (choice==="system") localStorage.removeItem("hammerdb-results-theme");
+                else localStorage.setItem("hammerdb-results-theme",choice); } catch(e) {}
+          reportTheme(choice);
+        });
+        colourMedia?.addEventListener?.("change",()=>{
+          if (themeChoice()==="system") reportTheme("system");
         });
         function safeLogoUrl(raw) {
           try {
@@ -429,7 +446,16 @@
             }
           }
           fill({});
-          fetch("leaderboard.json").then((response) => response.ok ? response.json() : null)
+          // The leaderboard stores this small attribution index when linking to a report.
+          // Avoid waiting on another network request when it is already in session.
+          try {
+            const cached=JSON.parse(sessionStorage.getItem("hammerdb-leaderboard-v1") || "null");
+            if(cached && Date.now()-cached.at<30*60*1000 && Array.isArray(cached.rows)){
+              const matched=cached.rows.find((r)=>r.jobid===source.job?.jobid);
+              if(matched){fill(matched);return;}
+            }
+          } catch(e) {}
+          fetch("leaderboard.json",{cache:"force-cache"}).then((response) => response.ok ? response.json() : null)
             .then((data) => {
               const row = data && Array.isArray(data.rows)
                 ? data.rows.find((r) => r.jobid === source.job?.jobid) : null;
@@ -459,7 +485,7 @@
             return element;
           }
           if (!svg) {
-            svg = node("svg", {class:"native-report-chart",viewBox:"0 0 720 318",role:"img","aria-label":(container.closest("section")?.querySelector("h3")?.textContent || id)+" chart",preserveAspectRatio:"xMidYMid meet"});
+            svg = node("svg", {class:"native-report-chart",viewBox:"0 0 650 352",role:"img","aria-label":(container.closest("section")?.querySelector("h3")?.textContent || id)+" chart",preserveAspectRatio:"xMidYMid meet"});
             container.appendChild(svg);
           }
           svg.replaceChildren();
@@ -470,7 +496,7 @@
           const datasets = Array.isArray(cfg.data.datasets) ? cfg.data.datasets : [];
           const labels = Array.isArray(cfg.data.labels) ? cfg.data.labels.map(String) : [];
           const count = Math.max(1, labels.length);
-          const ml=72, mr=22, mt=17, mb=77, w=720, h=318, pw=w-ml-mr, ph=h-mt-mb;
+          const ml=90, mr=23, mt=38, mb=80, w=650, h=352, pw=w-ml-mr, ph=h-mt-mb;
           const values = datasets.flatMap((d)=>Array.isArray(d.data) ? d.data.flatMap((point)=>{
             if(cfg.type==="boxplot" && point && typeof point==="object")
               // Plot up to p99; extreme maxima are retained in hover details, not the axis.
@@ -486,26 +512,31 @@
           const yAxis = cfg.options && cfg.options.scales && cfg.options.scales.y;
           const fixedMax = yAxis && typeof yAxis.max === "number" ? yAxis.max : null;
           function scaleMaximum(value) {
-            if (!value || value <= 0) return 1;
-            const raw = value/4, base = 10**Math.floor(Math.log10(raw));
-            const unit = [1,2,2.5,5,10].find((step)=>step*base>=raw) || 10;
-            return unit*base*4;
+            if (!Number.isFinite(value) || value <= 0) return 1;
+            const wanted=value*1.08;
+            const magnitude=10**Math.floor(Math.log10(wanted));
+            const intervals=[1,1.25,1.5,2,2.5,3,4,5,6,7.5,8,10];
+            return (intervals.find((n)=>n*magnitude>=wanted) || 10)*magnitude;
           }
           const maxY = fixedMax || scaleMaximum(actualMax);
           const xPos = (i)=>ml+((cfg.type==="bar" || cfg.type==="boxplot")?(i+0.5)*pw/count:(count===1?pw/2:i*pw/(count-1)));
           const yPos = (value)=>mt+ph*(1-Math.max(0,Math.min(maxY,value))/maxY);
           const labelY = yAxis?.ticks?.callback;
           function formatY(v) {
+            if(id==="cpu") return Math.round(v)+"%";
+            const abbrev=(value,suffix)=>Number(value.toFixed(value>=10?0:1)).toLocaleString()+suffix;
+            if(Math.abs(v)>=1000000)return abbrev(v/1000000,"M");
+            if(Math.abs(v)>=1000)return abbrev(v/1000,"k");
             if (typeof labelY === "function") return String(labelY(v));
-            return v>=1000 ? Math.round(v).toLocaleString() : Number(v.toFixed(2)).toString();
+            return Number(v.toFixed(2)).toString();
           }
           for(let k=0;k<=4;k++) {
             const value = maxY*k/4, y=yPos(value);
             svg.append(node("line",{x1:ml,y1:y,x2:w-mr,y2:y,stroke:grid,"stroke-width":1,"stroke-dasharray":k===0?"0":"4 5"}));
-            svg.append(node("text",{x:ml-12,y:y+4,fill:secondary,"text-anchor":"end","font-size":12},formatY(value)));
+            svg.append(node("text",{x:ml-12,y:y+4,fill:secondary,"text-anchor":"end","font-size":13},formatY(value)));
           }
           svg.append(node("line",{x1:ml,y1:mt,x2:ml,y2:mt+ph,stroke:grid,"stroke-width":1}));
-          const skip = Math.max(1,Math.ceil(count/8));
+          const skip = Math.max(1,Math.ceil(count/6));
           labels.forEach((name,i)=>{
             if(i!==count-1 && i%skip!==0) return;
             svg.append(node("text",{x:xPos(i),y:mt+ph+21,fill:secondary,"text-anchor":"middle","font-size":11},name.length>17?name.slice(0,16)+"…":name));
@@ -548,16 +579,25 @@
               svg.append(item);
             });
           } else if(cfg.type==="bar") {
-            const groupWidth = pw/count*0.72;
-            const barWidth = Math.min(72,groupWidth/Math.max(1,datasets.length)-3);
+            const defs=node("defs"); svg.append(defs);
+            const groupWidth = pw/count*0.86;
+            const barWidth = Math.min(133,Math.max(20,groupWidth/Math.max(1,datasets.length)-7));
             datasets.forEach((d,di)=>{
               (d.data || []).forEach((raw,i)=>{
                 const value = Number(raw);
                 if(!Number.isFinite(value)) return;
                 const left = xPos(i) - (barWidth*datasets.length+(datasets.length-1)*4)/2 + di*(barWidth+4);
                 const y=yPos(value),base=yPos(0);
-                const color = Array.isArray(d.backgroundColor)?d.backgroundColor[i%d.backgroundColor.length]:(d.backgroundColor||["#3f8eff","#ffac45","#9a72ed"][di%3]);
-                const bar = node("rect",{x:left,y:y,width:barWidth,height:Math.max(1,base-y),rx:4,fill:color});
+                const gradients=[
+                  ["#73b9ff","#2052d3"],["#bc9dff","#6445d0"],
+                  ["#5de0c0","#117d85"],["#ffbe81","#d46a39"]
+                ];
+                const shades=gradients[(di+i)%gradients.length], gradientId="report-bar-"+id+"-"+di+"-"+i;
+                const gradient=node("linearGradient",{id:gradientId,x1:"0%",y1:"0%",x2:"0%",y2:"100%"});
+                gradient.append(node("stop",{offset:"0%","stop-color":shades[0]}),
+                                node("stop",{offset:"100%","stop-color":shades[1]}));
+                defs.append(gradient);
+                const bar = node("rect",{x:left,y:y,width:barWidth,height:Math.max(1,base-y),rx:5,fill:"url(#"+gradientId+")"});
                 bar.append(node("title",{},(d.label||labels[i]||"Result")+": "+formatY(value)));
                 svg.append(bar);
               });
@@ -573,7 +613,7 @@
               if(d.fill){
                 const gradientId="native-report-fill-"+id+"-"+di;
                 const gradient=node("linearGradient",{id:gradientId,x1:"0%",y1:"0%",x2:"0%",y2:"100%"});
-                gradient.append(node("stop",{offset:"0%","stop-color":color,"stop-opacity":".27"}),node("stop",{offset:"100%","stop-color":color,"stop-opacity":".025"}));
+                gradient.append(node("stop",{offset:"0%","stop-color":color,"stop-opacity":id==="cpu"?".42":".35"}),node("stop",{offset:"100%","stop-color":color,"stop-opacity":".025"}));
                 definitions.append(gradient);
                 const area=path+" L"+points[points.length-1].x+","+yPos(0)+" L"+points[0].x+","+yPos(0)+" Z";
                 svg.append(node("path",{d:area,fill:"url(#"+gradientId+")"}));
@@ -589,7 +629,7 @@
             });
           }
           const units = (cfg.options?.scales?.y?.title?.text || "");
-          if(units)svg.append(node("text",{x:15,y:mt+ph/2,fill:secondary,"font-size":11,"text-anchor":"middle",transform:"rotate(-90 15 "+(mt+ph/2)+")"},units));
+          if(units)svg.append(node("text",{x:ml,y:20,fill:secondary,"font-size":13,"font-weight":600},units));
           const showLegend = datasets.length>1 || (cfg.type==="line" && datasets.length===1);
           if(showLegend) {
             const legendWidth=datasets.length*136,start=Math.max(ml,Math.round(w/2-legendWidth/2));
@@ -600,9 +640,21 @@
             });
           }
         }
+        const visibleChartObserver = typeof IntersectionObserver==="function"
+          ? new IntersectionObserver((entries,observer)=>{
+              for(const entry of entries){
+                if(!entry.isIntersecting)continue;
+                const id=entry.target.querySelector("canvas")?.id;
+                if(id && charts[id])drawNativeChart(id,charts[id]);
+                observer.unobserve(entry.target);
+              }
+            },{rootMargin:"300px 0px"}):null;
         function chart(id, cfg) {
           charts[id] = cfg;
-          drawNativeChart(id, cfg);
+          const element = $(id)?.parentElement;
+          if(!element) return;
+          if(visibleChartObserver) visibleChartObserver.observe(element);
+          else requestAnimationFrame(()=>drawNativeChart(id,cfg));
         }
         function opts(y, x, cb) {
           return {
@@ -666,7 +718,19 @@
             && /^results\/[a-z0-9/_-]+\.json$/i.test(artifact)) {
           artifactUrl = new URL("../" + artifact, location.href);
         }
-        fetch(artifactUrl)
+        // Reports linked from the leaderboard are preloaded while browsing.
+        // Use the cached original JSON to avoid a second network round-trip.
+        const reportCacheKey="hammerdb-report-v1:"+artifact;
+        let cachedArtifact=null;
+        try {
+          const item=JSON.parse(sessionStorage.getItem(reportCacheKey)||"null");
+          if(item && Date.now()-item.at<30*60*1000 && item.body?.job?.jobid)
+            cachedArtifact=item.body;
+        } catch(e){}
+        const request=cachedArtifact
+          ? Promise.resolve({ok:true,json:()=>Promise.resolve(cachedArtifact)})
+          : fetch(artifactUrl,{cache:"force-cache"});
+        request
           .then((r) => {
             if (!r.ok) {
               fail(
@@ -681,7 +745,15 @@
           .then((a) => {
             status.style.display = "none";
             content.style.display = "block";
-            $("raw").textContent = JSON.stringify(a, null, 2);
+            // Keep the large pretty-printed JSON out of the initial render path.
+            const rawDetails=$("raw").closest("details");
+            if(rawDetails)rawDetails.addEventListener("toggle",()=>{
+              if(rawDetails.open && !$("raw").textContent)
+                $("raw").textContent=JSON.stringify(a,null,2);
+            });
+            if(!cachedArtifact)try{
+              sessionStorage.setItem(reportCacheKey,JSON.stringify({at:Date.now(),body:a}));
+            }catch(e){}
             const j = a.job || {},
               res = a.result || {},
               cfg = a.benchmark_config || {},
@@ -946,8 +1018,8 @@
                     label: "usr %",
                     data: cpu.map((p) => p.usr),
                     borderColor: "#16a34a",
-                    backgroundColor: "rgba(22,163,74,.08)",
-                    fill: false,
+                    backgroundColor: "rgba(22,163,74,.24)",
+                    fill: true,
                     ...lineBase,
                   },
                   {
