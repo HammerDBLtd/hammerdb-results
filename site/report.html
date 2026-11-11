@@ -221,17 +221,18 @@
           </div>
         </section>
         <section class="card submission-evidence" id="submission-evidence">
-          <div class="report-submission-heading"><h2>Submitted result · provenance &amp; workload</h2><span id="report-workload-badge" class="report-profile-badge unclassified">Not classified</span></div>
+          <div class="report-submission-heading"><h2>Submitter comments</h2><span id="report-workload-badge" class="report-profile-badge unclassified">Not classified</span></div>
           <div class="report-identity-grid">
             <div><div class="k">Submitted by</div><div id="report-submitter" class="report-attribution">GitHub attribution not recorded</div></div>
             <div id="report-company-container" hidden><div class="k">Company / organisation</div><div id="report-company" class="report-company"></div><div id="report-company-description" class="report-company-description"></div></div>
           </div>
-          <div id="report-description-container" hidden><div class="k">About this result</div><p id="report-description"></p></div>
-          <div id="report-original-pr-container" hidden><div class="k">Notes accompanying the original pull request</div><p id="report-original-pr-notes"></p><a id="report-original-pr-link" class="report-origin-link" href="#" target="_blank" rel="noopener noreferrer">Read original PR</a></div>
-          <div id="report-comments-container" hidden><div class="k">Additional comments from the original submitter</div><div id="report-comments"></div></div>
-          <div id="report-config-container" hidden><div class="k">Declared TPROC-C configuration evidence</div><p id="report-config-evidence"></p></div>
+          <div id="report-description-container" hidden><div class="k">Benchmark description</div><p id="report-description"></p></div>
+          <div id="report-original-pr-container" hidden><div class="k">Original PR description</div><p id="report-original-pr-notes"></p><a id="report-original-pr-link" class="report-origin-link" href="#" target="_blank" rel="noopener noreferrer">Read original PR</a></div>
+          <div id="report-comments-container" hidden><div class="k">Additional comments</div><div id="report-comments"></div></div>
+          <p id="report-comments-empty" hidden class="muted">No comments have been added yet.</p>
+          <div id="report-config-container" hidden><div class="k">CPU / I/O configuration details</div><p id="report-config-evidence"></p></div>
           <div id="report-annotation-actions" class="report-annotation-actions" hidden>
-            <a id="report-annotate-link" class="report-edit-link" href="annotate.html">Add or update comments / company details</a>
+            <a id="report-annotate-link" class="report-edit-link" href="annotate.html">Add comments or company details</a>
             <span>Only the original GitHub submitter can have these changes accepted through a pull request.</span>
           </div>
         </section>
@@ -451,6 +452,9 @@
                 wrapper.appendChild(p);
               });
             }
+            const hasComments = Boolean(description || originalNotes ||
+              (Array.isArray(data.submitter_comments) && data.submitter_comments.length));
+            $("report-comments-empty").hidden = hasComments;
             if (ghRe.test(String(username || "")) && source.job?.jobid) {
               const target = new URL("annotate.html", location.href);
               target.searchParams.set("jobid", source.job.jobid);
