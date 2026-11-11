@@ -30,6 +30,13 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: python tools/check_pr_submitter.py
 
+      - name: Verify original submitter owns annotation changes
+        if: github.event_name == 'pull_request'
+        env:
+          EXPECTED_PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: python tools/check_annotation_author.py
+
       - name: Unit tests
         run: python -m unittest discover -s tests -v
 
