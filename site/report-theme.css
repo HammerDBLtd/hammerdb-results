@@ -1,0 +1,39 @@
+/* Visual connection to HammerDB results leaderboard; dark and light mode. */
+:root {
+  color-scheme:dark;
+  --bg:#090f1e;--card:#132038;--line:#293a55;--text:#eef4ff;--muted:#a0b2ca;
+}
+:root[data-theme="light"] {
+  color-scheme:light;
+  --bg:#f3f7fd;--card:#fff;--line:#d7e3f0;--text:#152541;--muted:#566984;
+}
+body{background:var(--bg);color:var(--text)}
+.top{background:var(--card);border-color:var(--line)}
+.top-inner{display:flex;gap:12px;align-items:center}
+.back{background:linear-gradient(120deg,#457fea,#8166e7);color:white}
+.label{margin-left:auto}
+.report-theme-toggle{background:var(--bg);border:1px solid var(--line);color:var(--text);padding:9px 12px;border-radius:9px;cursor:pointer;white-space:nowrap}
+.card{background:linear-gradient(120deg,var(--card),color-mix(in srgb,var(--card) 95%,#5a4ac8));border-color:var(--line);box-shadow:0 5px 24px rgba(0,0,0,.08)}
+.m{background:color-mix(in srgb,var(--card) 75%,var(--bg));border-color:var(--line)}
+.k,.label,.muted,.sub,th{color:var(--muted)}
+.kv .key{color:var(--text)}
+.chip{background:color-mix(in srgb,var(--card) 80%,var(--bg));color:var(--text);border-color:var(--line)}
+table th,table td{border-bottom-color:var(--line)}
+.warn{color:var(--text);background:color-mix(in srgb,var(--card) 80%,#e5b563);border-color:color-mix(in srgb,var(--line) 70%,#e4b969)}
+.err{background:color-mix(in srgb,var(--card) 80%,#c84661)}
+.submission-evidence{border-top:3px solid #6d8eeb}
+.report-submission-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.report-submission-heading h2{margin:0 0 10px}
+.report-identity-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:10px 0 18px}
+.report-attribution,.report-company{margin:5px 0;font-size:16px;font-weight:750}
+.report-company{display:flex;align-items:center;gap:11px}
+.report-company img{max-width:55px;max-height:42px;object-fit:contain}
+.report-company-description{font-size:12px;color:var(--muted);margin-top:4px}
+#report-description,#report-config-evidence{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;margin:6px 0 16px}
+.report-evidence-note{border-top:1px solid var(--line);padding-top:12px;color:var(--muted);font-size:12px;margin:15px 0 0}
+.report-profile-badge{font-size:11px;letter-spacing:.04em;font-weight:850;border:1px solid var(--line);background:var(--bg);color:var(--muted);padding:8px 12px;border-radius:10px}
+.report-profile-badge.io{background:rgba(42,177,157,.16);color:#5be4cb;border-color:rgba(53,190,159,.4)}
+.report-profile-badge.cpu{background:rgba(119,86,221,.18);color:#ccb0ff;border-color:rgba(143,102,226,.4)}
+:root[data-theme="light"] .report-profile-badge.io{color:#147b66}
+:root[data-theme="light"] .report-profile-badge.cpu{color:#6941ac}
+@media(max-width:650px){.report-identity-grid{grid-template-columns:1fr}.label{display:none}.report-theme-toggle{margin-left:auto}}

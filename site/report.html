@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -181,12 +181,13 @@
         }
       }
     </style>
+    <link rel="stylesheet" href="report-theme.css" />
   </head>
   <body>
     <nav class="top">
       <div class="top-inner">
         <a class="back" href="index.html">← Back to leaderboard</a
-        ><span class="label">HammerDB Result Artifact</span>
+        ><span class="label">HammerDB Result Artifact</span><button type="button" id="report-theme-toggle" class="report-theme-toggle">☀ Light mode</button>
       </div>
     </nav>
     <main class="wrap">
@@ -202,6 +203,16 @@
             <div id="primary" class="big">—</div>
             <div id="secondary" class="sub">—</div>
           </div>
+        </section>
+        <section class="card submission-evidence" id="submission-evidence">
+          <div class="report-submission-heading"><h2>Submitted result · provenance &amp; workload</h2><span id="report-workload-badge" class="report-profile-badge unclassified">Not classified</span></div>
+          <div class="report-identity-grid">
+            <div><div class="k">Submitted by</div><div id="report-submitter" class="report-attribution">GitHub attribution not recorded</div></div>
+            <div id="report-company-container" hidden><div class="k">Company / organisation</div><div id="report-company" class="report-company"></div><div id="report-company-description" class="report-company-description"></div></div>
+          </div>
+          <div id="report-description-container" hidden><div class="k">About this result</div><p id="report-description"></p></div>
+          <div id="report-config-container" hidden><div class="k">Declared TPROC-C configuration evidence</div><p id="report-config-evidence"></p></div>
+          <p class="report-evidence-note">Benchmark measurements come from the original result artifact. Workload profiles describe the submitted configuration, not a proven resource bottleneck or an official TPC audit.</p>
         </section>
         <section class="card">
           <h2>Benchmark configuration</h2>
@@ -325,6 +336,109 @@
               ? s
               : d.toISOString().slice(11, 19);
           };
+
+        function reportTheme(value) {
+          const mode = value === "light" ? "light" : "dark";
+          document.documentElement.dataset.theme = mode;
+          $("report-theme-toggle").textContent = mode === "dark" ? "☀ Light mode" : "☾ Dark mode";
+          if (typeof Chart !== "undefined") {
+            Chart.defaults.color = mode === "dark" ? "#bad0e9" : "#4e6381";
+            Object.values(charts).forEach((chart) => {
+              if (chart.options && chart.options.scales) {
+                for (const axis of Object.values(chart.options.scales)) {
+                  if (axis.grid) axis.grid.color = mode === "dark" ? "#2a3b56" : "#e6edf8";
+                }
+              }
+              chart.update();
+            });
+          }
+        }
+        try { reportTheme(localStorage.getItem("hammerdb-results-theme") || "dark"); }
+        catch { reportTheme("dark"); }
+        $("report-theme-toggle").addEventListener("click", () => {
+          const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+          reportTheme(next);
+          try { localStorage.setItem("hammerdb-results-theme", next); } catch {}
+        });
+        function safeLogoUrl(raw) {
+          try {
+            const url = new URL(String(raw));
+            return url.protocol === "https:" && !url.username && !url.password ? url.href : null;
+          } catch { return null; }
+        }
+        function renderSubmission(source, bench) {
+          const original = source.submission || {};
+          const ghRe = /^[a-z\d](?:[a-z\d-]{0,37}[a-z\d])?$/i;
+          function fill(data) {
+            const username = original.github_username || data.submitted_by;
+            $("report-submitter").replaceChildren();
+            if (ghRe.test(String(username || ""))) {
+              const link = document.createElement("a");
+              link.href = "https://github.com/" + encodeURIComponent(username);
+              link.target = "_blank";
+              link.rel = "noopener noreferrer";
+              link.textContent = "@" + username;
+              $("report-submitter").append(link);
+            } else {
+              $("report-submitter").textContent = "GitHub attribution not recorded";
+            }
+            const company = original.company || {};
+            const name = company.name || data.company_name;
+            const desc = company.description || data.company_description;
+            const image = safeLogoUrl(company.logo_url || data.company_logo_url);
+            if (name || desc || image) {
+              $("report-company-container").hidden = false;
+              $("report-company").replaceChildren();
+              if (image) {
+                const logo = document.createElement("img");
+                logo.src = image; logo.alt = String(name || "Company") + " logo";
+                logo.referrerPolicy = "no-referrer";
+                logo.loading = "lazy";
+                $("report-company").append(logo);
+              }
+              const nameSpan = document.createElement("strong");
+              nameSpan.textContent = name || "Organisation";
+              $("report-company").append(nameSpan);
+              $("report-company-description").textContent = desc || "";
+            }
+            const description = original.description || data.result_description;
+            if (description) {
+              $("report-description-container").hidden = false;
+              $("report-description").textContent = description;
+            }
+            const w = original.workload || {};
+            const category = data.workload_class || w.classification || "unclassified";
+            const uaw = w.use_all_warehouses !== undefined ? w.use_all_warehouses : data.workload_uaw;
+            const durability = w.durability || data.workload_durability || "unknown";
+            const details = w.details || data.workload_details || "";
+            const validIo = category === "io-intensive" && uaw === true && durability === "full" && details;
+            const validCpu = category === "cpu-intensive" && uaw === false && ["full", "relaxed"].includes(durability) && details;
+            const badge = $("report-workload-badge");
+            if (bench === "TPROC-C" && (validIo || validCpu)) {
+              badge.className = "report-profile-badge " + (validIo ? "io" : "cpu");
+              badge.textContent = validIo ? "I/O-INTENSIVE · DECLARED" : "CPU-INTENSIVE · DECLARED";
+              $("report-config-container").hidden = false;
+              $("report-config-evidence").textContent = "UAW: " + (uaw ? "Enabled" : "Disabled") +
+                " · Durability: " + (durability === "full" ? "Full/synchronous" : "Relaxed") +
+                "\n" + details;
+            } else {
+              badge.className = "report-profile-badge unclassified";
+              badge.textContent = bench === "TPROC-C" ? "NOT CLASSIFIED" : "TPROC-H";
+              if (bench === "TPROC-C" && (uaw !== undefined && uaw !== null || durability !== "unknown" || details)) {
+                $("report-config-container").hidden = false;
+                $("report-config-evidence").textContent = "UAW: " + (uaw == null ? "Not recorded" : uaw ? "Enabled" : "Disabled") + " · Durability: " + durability + "\n" + details;
+              }
+            }
+          }
+          fill({});
+          fetch("leaderboard.json").then((response) => response.ok ? response.json() : null)
+            .then((data) => {
+              const row = data && Array.isArray(data.rows)
+                ? data.rows.find((r) => r.jobid === source.job?.jobid) : null;
+              if (row) fill(row);
+            }).catch(() => {});
+        }
+
         function disclaimer(b) {
           const standard =
             String(b || "").toUpperCase() === "TPROC-H" ? "TPC-H" : "TPC-C";
@@ -415,6 +529,7 @@
             $("title").textContent =
               `${j.database_display || j.database || "Unknown"} · ${j.benchmark || "Unknown benchmark"}`;
             $("disclaimer").textContent = disclaimer(benchmark);
+            renderSubmission(a, benchmark);
             [
               ["Release", j.release],
               ["HammerDB Version", j.hdb_version],
