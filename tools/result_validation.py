@@ -146,8 +146,12 @@ def _validate_submission_metadata(payload: dict, rel_path: Path) -> list[str]:
 
     logo = company.get("logo_url", "")
     if isinstance(logo, str) and logo:
-        parsed = urlparse(logo)
-        if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
+        try:
+            parsed = urlparse(logo)
+            valid_logo = parsed.scheme == "https" and bool(parsed.hostname) and not parsed.username and not parsed.password
+        except ValueError:
+            valid_logo = False
+        if not valid_logo:
             errors.append(f"{label}: field 'submission.company.logo_url' must be a public HTTPS URL")
         if not company.get("name"):
             errors.append(f"{label}: field 'submission.company.name' is required when providing a logo")
@@ -162,17 +166,18 @@ def _validate_submission_metadata(payload: dict, rel_path: Path) -> list[str]:
     uaw = workload.get("use_all_warehouses")
     durability = workload.get("durability", "unknown")
     details = workload.get("details", "")
-    if classification not in VALID_WORKLOADS:
+    if not isinstance(classification, str) or classification not in VALID_WORKLOADS:
         errors.append(f"{label}: invalid submission workload classification")
     if uaw is not None and type(uaw) is not bool:
         errors.append(f"{label}: submission workload use_all_warehouses must be true, false or null")
-    if durability not in VALID_DURABILITY:
+    if not isinstance(durability, str) or durability not in VALID_DURABILITY:
         errors.append(f"{label}: invalid submission workload durability")
     if not isinstance(details, str) or len(details) > 1200:
         errors.append(f"{label}: submission workload details must be a string of at most 1200 characters")
         details = ""
 
-    job = payload.get("job") or {}
+    job = payload.get("job")
+    job = job if isinstance(job, dict) else {}
     cfg = payload.get("benchmark_config") or {}
     if classification != "unclassified":
         if job.get("benchmark") != "TPROC-C":

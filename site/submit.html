@@ -340,7 +340,9 @@
   const artifactUrl = new URLSearchParams(location.search).get("artifact_url");
   if (artifactUrl) {
     status("Loading saved artifact", "Retrieving the supplied benchmark JSON URL…");
-    fetch(artifactUrl).then((response) => { if (!response.ok) throw Error("HTTP " + response.status); return response.text(); })
+    fetch(artifactUrl, { headers: { Accept: "application/json" } }).then((response) =>
+      response.status === 401 ? fetch(artifactUrl, { credentials: "include", headers: { Accept: "application/json" } }) : response
+    ).then((response) => { if (!response.ok) throw Error("HTTP " + response.status); return response.text(); })
       .then(loadArtifact).catch((error) => status("Unable to load artifact", error.message + ". You can still select the saved JSON file.", "error"));
   }
 })();
