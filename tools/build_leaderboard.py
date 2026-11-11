@@ -68,12 +68,44 @@ def _annotations() -> dict[str, dict]:
             if not allowed or not company.get("name"):
                 raise ValueError(f"{file}: logo requires company name and a public HTTPS URL")
         comments = note.get("comments", [])
-        if not isinstance(comments, list) or len(comments) > 30 or any(
-            not isinstance(c, str) or not c.strip() or len(c) > 4000 for c in comments
-        ):
-            raise ValueError(f"{file}: comments must be up to 30 nonempty text entries (4000 chars each)")
-        if not any([company.get("name"), company.get("description"), comments]):
-            raise ValueError(f"{file}: add a company profile or at least one comment")
+        if not isinstance(comments, list) or len(comments) > 30:
+            raise ValueError(f"{file}: comments must be an array (maximum 30 entries)")
+        for comment in comments:
+            if isinstance(comment, str):  # Pre-existing original-submitters' notes
+                valid = bool(comment.strip()) and len(comment) <= 4000
+            elif isinstance(comment, dict):
+                author = comment.get("github_username")
+                text = comment.get("text")
+                valid = (
+                    isinstance(author, str) and bool(GH_LOGIN.fullmatch(author)) and "--" not in author
+                    and isinstance(text, str) and bool(text.strip()) and len(text) <= 4000
+                )
+            else:
+                valid = False
+            if not valid:
+                raise ValueError(f"{file}: invalid or unattributed comment")
+        workload = note.get("workload")
+        if workload is not None:
+            if not isinstance(workload, dict):
+                raise ValueError(f"{file}: workload must be an object")
+            classification = workload.get("classification", "unclassified")
+            uaw = workload.get("use_all_warehouses")
+            durability = workload.get("durability", "unknown")
+            details = workload.get("details", "")
+            if classification not in ("unclassified", "cpu-intensive", "io-intensive"):
+                raise ValueError(f"{file}: invalid workload classification")
+            if uaw is not None and type(uaw) is not bool:
+                raise ValueError(f"{file}: UAW must be boolean or null")
+            if durability not in ("unknown", "full", "relaxed") or not isinstance(details, str) or len(details) > 1200:
+                raise ValueError(f"{file}: invalid workload durability or details")
+            if classification in ("cpu-intensive", "io-intensive") and len(details.strip()) < 20:
+                raise ValueError(f"{file}: classified workloads require 20+ characters of configuration evidence")
+            if classification == "cpu-intensive" and (uaw is not False or durability not in ("full", "relaxed")):
+                raise ValueError(f"{file}: CPU-intensive requires UAW disabled and declared durability")
+            if classification == "io-intensive" and (uaw is not True or durability != "full"):
+                raise ValueError(f"{file}: I/O-intensive requires UAW enabled and full durability")
+        if not any([company.get("name"), company.get("description"), comments, workload]):
+            raise ValueError(f"{file}: add company information, a comment or workload settings")
         out[jobid] = note
     return out
 
@@ -105,10 +137,14 @@ def _submission_fields(payload: dict, legacy: dict, annotations: dict | None = N
     submitter = submission.get("github_username") or legacy_info.get("github_username")
     attribution = ("submission" if submission.get("github_username") else
                    "original-pr" if legacy_info.get("github_username") else "unknown")
-    kind = workload.get("classification", "unclassified")
-    uaw = workload.get("use_all_warehouses")
-    durability = workload.get("durability", "unknown")
-    details = str(workload.get("details") or "").strip()
+    # A separately reviewed annotation overrides the declaration without
+    # changing the immutable original result JSON.
+    annotation_workload = annotation.get("workload") if annotation else None
+    effective = annotation_workload if isinstance(annotation_workload, dict) else workload
+    kind = effective.get("classification", "unclassified")
+    uaw = effective.get("use_all_warehouses")
+    durability = effective.get("durability", "unknown")
+    details = str(effective.get("details") or "").strip()
     benchmark = job.get("benchmark")
 
     if benchmark != "TPROC-C":
@@ -129,6 +165,8 @@ def _submission_fields(payload: dict, legacy: dict, annotations: dict | None = N
         "original_pr_description": legacy_info.get("pr_description"),
         "submitter_comments": annotation.get("comments", []) if annotation else [],
         "annotation_exists": bool(annotation),
+        "annotation_company": annotation.get("company", {}) if annotation else {},
+        "annotation_workload": annotation_workload if isinstance(annotation_workload, dict) else None,
         "company_name": extra_company.get("name") or company.get("name"),
         "company_logo_url": extra_company.get("logo_url") or company.get("logo_url"),
         "company_description": extra_company.get("description") or company.get("description"),
@@ -137,7 +175,8 @@ def _submission_fields(payload: dict, legacy: dict, annotations: dict | None = N
         "workload_uaw": uaw if type(uaw) is bool else None,
         "workload_durability": durability,
         "workload_details": details or None,
-        "workload_attribution": "submitter-declared" if kind != "unclassified" else "not supplied",
+        "workload_attribution": ("author-or-maintainer-declared" if annotation_workload is not None else "submitter-declared")
+                                if kind != "unclassified" else "not supplied",
     }
 
 
@@ -177,6 +216,20 @@ def _load_rows() -> list[dict]:
         }
         row.update(_submission_fields(payload, legacy, annotations))
         rows.append(row)
+
+    # Reject annotations contradicting values explicitly recorded in the artifact.
+    for row in rows:
+        annotation = annotations.get(row["jobid"])
+        if not annotation or not isinstance(annotation.get("workload"), dict):
+            continue
+        if row["benchmark"] != "TPROC-C":
+            raise ValueError(f"{row['jobid']}: workload classification is only supported for TPROC-C")
+        original = json.loads((REPO_ROOT / row["source_path"]).read_text(encoding="utf-8"))
+        config = original.get("benchmark_config") or {}
+        declared = annotation["workload"].get("use_all_warehouses")
+        for key in ("use_all_warehouses", "all_warehouses", "uaw"):
+            if type(config.get(key)) is bool and type(declared) is bool and config[key] != declared:
+                raise ValueError(f"{row['jobid']}: workload UAW contradicts artifact benchmark_config.{key}")
 
     unknown = set(annotations) - {row["jobid"] for row in rows}
     if unknown:
