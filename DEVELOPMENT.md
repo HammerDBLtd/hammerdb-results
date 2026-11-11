@@ -2,9 +2,9 @@
 
 ## Non-negotiable repository roles
 
-- **UPSTREAM (READ-ONLY):** [TPC-Council/hammerdb-results](https://github.com/TPC-Council/hammerdb-results), branch `main`.
+- **PUBLICATION REPOSITORY (NO DIRECT PUSH):** [TPC-Council/hammerdb-results](https://github.com/TPC-Council/hammerdb-results), branch `main`.
 - **DEVELOPMENT (WRITABLE):** [HammerDBLtd/hammerdb-results](https://github.com/HammerDBLtd/hammerdb-results), branch `master`.
-- **Synchronization direction: TPC-Council -> HammerDBLtd only.** Never push, create a pull request, or modify files, settings, branches, or Actions in the TPC-Council repository.
+- **Fetching results:** TPC-Council -> HammerDBLtd only; do not automatically mirror development changes or push directly to TPC-Council. **Publication:** contributors may deliberately open a PR to TPC-Council; only TPC maintainers merge it.
 - The two repositories are independent repositories, not registered GitHub forks.
 
 ## Baseline
@@ -15,7 +15,7 @@ HammerDB Ltd's previous `master` is preserved in `backup/master-before-tpc-sync-
 
 Differences intentionally retained in the development repository:
 - `.github/workflows/publish.yml` publishes from `master`, not upstream's `main`.
-- `site/submit.html` targets `HammerDBLtd/hammerdb-results` on `master`, not TPC Council.
+- `site/repository.js` selects the deployed repository: HammerDB Ltd `master` in development, TPC-Council `main` on its public Pages deployment.
 - `DEVELOPMENT.md` documents this read-only upstream arrangement.
 
 ## Work only in HammerDB Ltd
@@ -35,7 +35,7 @@ git commit -m "Describe the improvement"
 git push -u origin feature/my-change
 ```
 
-Open pull requests **only to HammerDBLtd/hammerdb-results** and merge approved changes to its `master`.
+Develop and review code in **HammerDBLtd/hammerdb-results**. When it is deliberately promoted to the public repository, the contributor opens a separate PR to **TPC-Council/hammerdb-results** for TPC maintainer review. Never push directly to TPC.
 
 ## Refresh from TPC Council (read-only)
 
@@ -44,7 +44,7 @@ When newer accepted upstream results or fixes are needed:
 1. Fetch TPC Council `main` strictly for reading; never push to that remote.
 2. Compare its current files against HammerDB Ltd `master`.
 3. On a new **HammerDB Ltd** sync branch, import only desired upstream changes while preserving development changes and HammerDB Ltd-specific URLs and workflow branch.
-4. Run validation and tests. Open and merge a pull request **in HammerDB Ltd only**.
+4. Run validation and tests. Integrate the incoming changes in HammerDB Ltd; do not auto-push to TPC.
 
 For local use, configure the upstream remote to block pushing as an additional safeguard:
 
@@ -54,4 +54,4 @@ git remote set-url --push tpc-upstream DISABLED
 git fetch tpc-upstream main
 ```
 
-Do not run `git push` against `tpc-upstream`. Never automatically mirror/deploy HammerDB Ltd changes into TPC Council. Production is entirely outside our development workflow.
+Do not run `git push` against `tpc-upstream`. Never automatically mirror/deploy HammerDB Ltd changes into TPC Council. Promotion to the public repo is an explicit contributor PR and TPC maintainer decision.

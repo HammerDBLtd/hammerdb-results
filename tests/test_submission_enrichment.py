@@ -159,5 +159,83 @@ class SubmissionMetadataTests(unittest.TestCase):
                 setattr(build_leaderboard, name, value)
 
 
+    def test_annotations_merge_without_changing_benchmark_artifact(self):
+        artifact = sample_result()
+        self.save(artifact)
+        result_path = self.root / canonical_result_path(artifact["job"])
+        original_bytes = result_path.read_bytes()
+        attribution = self.root / "submissions"
+        (attribution / "annotations").mkdir(parents=True)
+        (attribution / "legacy-attribution.json").write_text(
+            json.dumps({"SUBMIT123": {
+                "github_username": "original-pr-user",
+                "pr_url": "https://github.com/TPC-Council/hammerdb-results/pull/99",
+                "pr_description": "Settings described in the original PR",
+            }}), encoding="utf-8")
+        (attribution / "annotations" / "SUBMIT123.json").write_text(json.dumps({
+            "jobid": "SUBMIT123",
+            "github_username": "original-pr-user",
+            "company": {
+                "name": "ExampleDB",
+                "logo_url": "https://example.org/logo.png",
+                "description": "Database research",
+            },
+            "comments": ["Used synchronous database durability", "Follow-up testing on larger instance"],
+        }), encoding="utf-8")
+        old_root, old_results = build_leaderboard.REPO_ROOT, build_leaderboard.RESULTS_ROOT
+        try:
+            build_leaderboard.REPO_ROOT = self.root
+            build_leaderboard.RESULTS_ROOT = self.results
+            rows = build_leaderboard._load_rows()
+            self.assertEqual(1, len(rows))
+            self.assertEqual("ExampleDB", rows[0]["company_name"])
+            self.assertEqual("https://example.org/logo.png", rows[0]["company_logo_url"])
+            self.assertEqual("Settings described in the original PR", rows[0]["original_pr_description"])
+            self.assertEqual(2, len(rows[0]["submitter_comments"]))
+            self.assertEqual(True, rows[0]["annotation_exists"])
+            self.assertEqual(original_bytes, result_path.read_bytes())
+        finally:
+            build_leaderboard.REPO_ROOT, build_leaderboard.RESULTS_ROOT = old_root, old_results
+
+    def test_annotations_reject_original_submitter_impersonation(self):
+        artifact = sample_result()
+        self.save(artifact)
+        directory = self.root / "submissions" / "annotations"
+        directory.mkdir(parents=True)
+        (self.root / "submissions" / "legacy-attribution.json").write_text(
+            json.dumps({"SUBMIT123": {"github_username": "original-pr-user"}}),
+            encoding="utf-8")
+        (directory / "SUBMIT123.json").write_text(json.dumps({
+            "jobid": "SUBMIT123", "github_username": "different-github-user",
+            "comments": ["These are not the original author's comments"],
+        }), encoding="utf-8")
+        original_root, original_results = build_leaderboard.REPO_ROOT, build_leaderboard.RESULTS_ROOT
+        try:
+            build_leaderboard.REPO_ROOT = self.root
+            build_leaderboard.RESULTS_ROOT = self.results
+            with self.assertRaisesRegex(ValueError, "Invalid annotation owner"):
+                build_leaderboard._load_rows()
+        finally:
+            build_leaderboard.REPO_ROOT, build_leaderboard.RESULTS_ROOT = original_root, original_results
+
+    def test_annotations_reject_orphan_jobids(self):
+        self.save(sample_result())
+        directory = self.root / "submissions" / "annotations"
+        directory.mkdir(parents=True)
+        (directory / "UNKNOWN999.json").write_text(json.dumps({
+            "jobid": "UNKNOWN999", "github_username": "tester123",
+            "comments": ["Notes on an unpublished result"],
+        }), encoding="utf-8")
+        original_root, original_results = build_leaderboard.REPO_ROOT, build_leaderboard.RESULTS_ROOT
+        try:
+            build_leaderboard.REPO_ROOT = self.root
+            build_leaderboard.RESULTS_ROOT = self.results
+            with self.assertRaisesRegex(ValueError, "Annotations reference unpublished jobs"):
+                build_leaderboard._load_rows()
+        finally:
+            build_leaderboard.REPO_ROOT, build_leaderboard.RESULTS_ROOT = original_root, original_results
+
+
+
 if __name__ == "__main__":
     unittest.main()

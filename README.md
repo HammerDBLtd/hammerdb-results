@@ -1,6 +1,6 @@
 # HammerDB Community Benchmark Results
 
-This is the **HammerDB Ltd development copy** of [TPC-Council/hammerdb-results](https://github.com/TPC-Council/hammerdb-results). **TPC-Council is strictly READ-ONLY. Never push, open a pull request, or publish changes there.** All development and testing happen in `HammerDBLtd/hammerdb-results`, with one-way imports from TPC-Council when needed.
+This is the **HammerDB Ltd development copy** of the [TPC-Council published results repository](https://github.com/TPC-Council/hammerdb-results). Development changes are made and tested in HammerDB Ltd. TPC-Council receives changes **only via an explicit contributor-created pull request and upstream maintainer review**, never an automatic mirror or direct push from this development copy. Fetching upstream results into HammerDB Ltd remains read-only.
 
 ## Leaderboard
 
@@ -16,9 +16,22 @@ Use `site/submit.html` (or its GitHub Pages deployment). A pipeline is **not** r
 2. Upload the artifact; the submission form validates its required fields and the canonical result path.
 3. Enter the GitHub username that will open the pull request. Optionally add company name, logo URL, company description and a description of the benchmark.
 4. For TPROC-C, record UAW and durability options, with configuration details, or leave the workload *Not classified*.
-5. Copy the enriched JSON and use the GitHub new-file editor to create `results/<benchmark>/<database>/<year>/<month>/<jobid>.json` **in HammerDB Ltd**. Commit and open a pull request.
+5. Copy the enriched JSON and use the GitHub new-file editor to create `results/<benchmark>/<database>/<year>/<month>/<jobid>.json` **in the repository hosting the submission page**. Commit and open a pull request to that repository.
 
 The submission flow preserves the original result fields (`job`, `benchmark_config`, `system`, metrics, charts and measurements). It adds a separate, optional top-level `submission` object. Older result artifacts without this metadata continue to validate and render.
+
+## Add comments after publication
+
+Original submitters may use **Add or update comments / company details** on their published report. The browser form is at `site/annotate.html?jobid=<id>`. It lets them supply a public HTTPS company logo, organisation name and description, and append detailed benchmark comments.
+
+Annotations are stored **separately** in `submissions/annotations/<jobid>.json`. They are rendered by the leaderboard build and never alter the original JSON result artifact. Historical upstream PR descriptions are recorded in `submissions/legacy-attribution.json` and shown separately as **Original PR notes**, not as new comments from the submitter.
+
+The GitHub editor link is determined by the deployment environment:
+- On **HammerDBLtd GitHub Pages**, it targets `HammerDBLtd/hammerdb-results` (`master`) for development.
+- On **TPC-Council GitHub Pages**, it targets `TPC-Council/hammerdb-results` (`main`) for the official PR.
+- The original submitter proposes the annotation through their own fork or branch; a maintainer reviews and merges it. The browser never writes directly to a repository.
+
+The original submitter's GitHub username is read from the published result/provenance and verified by GitHub Actions **against the PR author and the base branch's original result**, so contributors cannot claim another person's submission by editing its metadata.
 
 The GitHub Actions PR validation checks new result artifacts' declared GitHub username against the authenticated PR author. Imports of already accepted upstream artifacts can instead cite the verified original PR in the legacy attribution map.
 
@@ -46,7 +59,7 @@ python3 -m unittest discover -s tests -v
 python3 tools/build_leaderboard.py
 ```
 
-`tools/build_leaderboard.py` updates `site/leaderboard.json` from source artifacts and provenance metadata; the frontend in `site/index.html`, `site/leaderboard.css` and `site/leaderboard.js` renders the results. GitHub Pages uses HammerDB Ltd `master`.
+`tools/build_leaderboard.py` updates `site/leaderboard.json` from source artifacts and provenance metadata; the frontend in `site/index.html`, `site/leaderboard.css` and `site/leaderboard.js` renders the results. GitHub Pages uses the respective repository's default publication branch. The same frontend can run in both environments.
 
 Community results are **user-submitted, unaudited and not official TPC benchmark results**.
 
