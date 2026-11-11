@@ -191,6 +191,7 @@
         }
       }
     </style>
+    <script src="repository.js"></script>
     <link rel="stylesheet" href="report-theme.css" />
   </head>
   <body>
@@ -225,8 +226,13 @@
             <div id="report-company-container" hidden><div class="k">Company / organisation</div><div id="report-company" class="report-company"></div><div id="report-company-description" class="report-company-description"></div></div>
           </div>
           <div id="report-description-container" hidden><div class="k">About this result</div><p id="report-description"></p></div>
+          <div id="report-original-pr-container" hidden><div class="k">Notes accompanying the original pull request</div><p id="report-original-pr-notes"></p><a id="report-original-pr-link" class="report-origin-link" href="#" target="_blank" rel="noopener noreferrer">Read original PR</a></div>
+          <div id="report-comments-container" hidden><div class="k">Additional comments from the original submitter</div><div id="report-comments"></div></div>
           <div id="report-config-container" hidden><div class="k">Declared TPROC-C configuration evidence</div><p id="report-config-evidence"></p></div>
-          <p class="report-evidence-note">Benchmark measurements come from the original result artifact. Workload profiles describe the submitted configuration, not a proven resource bottleneck or an official TPC audit.</p>
+          <div id="report-annotation-actions" class="report-annotation-actions" hidden>
+            <a id="report-annotate-link" class="report-edit-link" href="annotate.html">Add or update comments / company details</a>
+            <span>Only the original GitHub submitter can have these changes accepted through a pull request.</span>
+          </div>
         </section>
         <section class="card">
           <h2>Benchmark configuration</h2>
@@ -398,9 +404,9 @@
               $("report-submitter").textContent = "GitHub attribution not recorded";
             }
             const company = original.company || {};
-            const name = company.name || data.company_name;
-            const desc = company.description || data.company_description;
-            const image = safeLogoUrl(company.logo_url || data.company_logo_url);
+            const name = data.company_name || company.name;
+            const desc = data.company_description || company.description;
+            const image = safeLogoUrl(data.company_logo_url || company.logo_url);
             if (name || desc || image) {
               $("report-company-container").hidden = false;
               $("report-company").replaceChildren();
@@ -420,6 +426,35 @@
             if (description) {
               $("report-description-container").hidden = false;
               $("report-description").textContent = description;
+            }
+            const originalNotes = data.original_pr_description;
+            if (originalNotes) {
+              $("report-original-pr-container").hidden = false;
+              $("report-original-pr-notes").textContent = originalNotes;
+              const prLink = data.submission_pr_url;
+              if (/^https:\/\/github\.com\/[a-z0-9-]+\/hammerdb-results\/pull\/\d+$/i.test(prLink || "")) {
+                $("report-original-pr-link").href = prLink;
+                $("report-original-pr-link").hidden = false;
+              } else {
+                $("report-original-pr-link").hidden = true;
+              }
+            }
+            if (Array.isArray(data.submitter_comments) && data.submitter_comments.length) {
+              $("report-comments-container").hidden = false;
+              const wrapper = $("report-comments");
+              wrapper.replaceChildren();
+              data.submitter_comments.forEach((comment)=>{
+                const p=document.createElement("p");
+                p.className="report-submitter-comment";
+                p.textContent=comment;
+                wrapper.appendChild(p);
+              });
+            }
+            if (ghRe.test(String(username || "")) && source.job?.jobid) {
+              const target = new URL("annotate.html", location.href);
+              target.searchParams.set("jobid", source.job.jobid);
+              $("report-annotate-link").href = target.href;
+              $("report-annotation-actions").hidden = false;
             }
             const w = original.workload || {};
             const category = data.workload_class || w.classification || "unclassified";

@@ -68,3 +68,15 @@ table th,table td{border-bottom-color:var(--line)}
 .native-report-chart{height:100%;width:100%;display:block}
 .grid2>section{padding:14px 14px 8px}
 @media(max-width:590px){.theme-control>span{display:none}.theme-select{min-height:35px;padding:7px}.chart-box{height:258px}}
+
+/* Original pull-request context and separately reviewed author annotations. */
+#report-original-pr-container,#report-comments-container,#report-description-container{margin:18px 0 0}
+#report-original-pr-notes,.report-submitter-comment{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.6;margin:7px 0 10px}
+#report-original-pr-notes{max-width:100ch}
+.report-origin-link{display:inline-block;color:#6dbdff;font-size:12px;font-weight:700}
+:root[data-theme="light"] .report-origin-link{color:#155cb0}
+.report-submitter-comment{padding:12px 16px;border-left:3px solid #7898ef;background:color-mix(in srgb,var(--card) 76%,var(--bg));border-radius:4px 10px 10px 4px}
+.report-annotation-actions{border-top:1px solid var(--line);padding-top:16px;margin-top:18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.report-annotation-actions[hidden]{display:none!important}
+.report-edit-link{display:inline-block;padding:9px 14px;border-radius:9px;text-decoration:none;background:linear-gradient(110deg,#4279e3,#7357cc);color:#fff;font-size:12px;font-weight:800}
+.report-annotation-actions span{font-size:11px;color:var(--muted);max-width:480px}
