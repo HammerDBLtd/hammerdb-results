@@ -28,8 +28,8 @@ The GitHub Actions PR validation checks new result artifacts' declared GitHub us
 
 | Display label | Requirements |
 | --- | --- |
-| I/O-focused | Use All Warehouses (UAW) enabled, full/synchronous database durability, and written configuration explanation |
-| CPU-focused | UAW disabled, durability declared as full or relaxed, and written explanation of the CPU-focused setup |
+| I/O-intensive | Use All Warehouses (UAW) enabled, full/synchronous database durability, and written configuration explanation |
+| CPU-intensive | UAW disabled, durability declared as full or relaxed, and written explanation of the CPU-intensive setup |
 | Not classified | Missing, uncertain or insufficient configuration evidence; default for existing results |
 
 The artifact is the benchmark record. The form asks for missing UAW/durability evidence because older artifacts often have only the basic workload settings. A pipeline-specific configuration file is **not** mandatory. A declaration conflicting with an explicit UAW value in `benchmark_config` fails validation.

@@ -38,7 +38,7 @@
   function badge(row) {
     if (row.benchmark !== "TPROC-C") return "";
     const type = row.workload_class || "unclassified";
-    const labels = { "cpu-intensive": "◈ CPU-FOCUSED", "io-intensive": "◈ I/O-FOCUSED", unclassified: "◇ NOT CLASSIFIED" };
+    const labels = { "cpu-intensive": "◈ CPU-INTENSIVE", "io-intensive": "◈ I/O-INTENSIVE", unclassified: "◇ NOT CLASSIFIED" };
     const css = type === "cpu-intensive" ? "cpu" : type === "io-intensive" ? "io" : "unknown";
     const help = type === "unclassified"
       ? "Configuration evidence not supplied. No classification inferred from performance metrics."
@@ -70,11 +70,12 @@
   }
 
   function evidence(row) {
-    if (row.benchmark !== "TPROC-C" || row.workload_class === "unclassified") return "";
+    if (row.benchmark !== "TPROC-C") return "";
+    if (row.workload_class === "unclassified" && row.workload_uaw == null && (row.workload_durability === "unknown" || !row.workload_durability) && !row.workload_details) return "";
     const uaw = row.workload_uaw === true ? "Enabled" : row.workload_uaw === false ? "Disabled" : "Not recorded";
     const durability = row.workload_durability === "full" ? "Full / synchronous" :
       row.workload_durability === "relaxed" ? "Relaxed" : "Not recorded";
-    return '<details class="configuration-evidence"><summary>Why is this labelled ' + esc(row.workload_class === "io-intensive" ? "I/O-focused" : "CPU-focused") +
+    return '<details class="configuration-evidence"><summary>' + (row.workload_class === "unclassified" ? "View recorded configuration" : "Why is this labelled " + esc(row.workload_class === "io-intensive" ? "I/O-intensive" : "CPU-intensive")) +
       '?</summary><p><strong>Submitter-declared configuration.</strong> UAW: ' + esc(uaw) +
       " · Durability: " + esc(durability) + "\n" + esc(row.workload_details || "") +
       '\nThis describes the test configuration, not a diagnosis of the hardware bottleneck.</p></details>';

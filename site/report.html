@@ -416,7 +416,7 @@
             const badge = $("report-workload-badge");
             if (bench === "TPROC-C" && (validIo || validCpu)) {
               badge.className = "report-profile-badge " + (validIo ? "io" : "cpu");
-              badge.textContent = validIo ? "I/O-FOCUSED · DECLARED" : "CPU-FOCUSED · DECLARED";
+              badge.textContent = validIo ? "I/O-INTENSIVE · DECLARED" : "CPU-INTENSIVE · DECLARED";
               $("report-config-container").hidden = false;
               $("report-config-evidence").textContent = "UAW: " + (uaw ? "Enabled" : "Disabled") +
                 " · Durability: " + (durability === "full" ? "Full/synchronous" : "Relaxed") +
@@ -424,6 +424,10 @@
             } else {
               badge.className = "report-profile-badge unclassified";
               badge.textContent = bench === "TPROC-C" ? "NOT CLASSIFIED" : "TPROC-H";
+              if (bench === "TPROC-C" && (uaw !== undefined && uaw !== null || durability !== "unknown" || details)) {
+                $("report-config-container").hidden = false;
+                $("report-config-evidence").textContent = "UAW: " + (uaw == null ? "Not recorded" : uaw ? "Enabled" : "Disabled") + " · Durability: " + durability + "\n" + details;
+              }
             }
           }
           fill({});
