@@ -228,12 +228,12 @@
           </div>
           <div id="report-description-container" hidden><div class="k">Benchmark description</div><p id="report-description"></p></div>
           <div id="report-original-pr-container" hidden><div class="k">Original PR description</div><p id="report-original-pr-notes"></p><a id="report-original-pr-link" class="report-origin-link" href="#" target="_blank" rel="noopener noreferrer">Read original PR</a></div>
-          <div id="report-comments-container" hidden><div class="k">Additional comments</div><div id="report-comments"></div></div>
+          <div id="report-comments-container" hidden><div class="k">Comments</div><div id="report-comments"></div></div>
           <p id="report-comments-empty" hidden class="muted">No comments have been added yet.</p>
           <div id="report-config-container" hidden><div class="k">CPU / I/O configuration details</div><p id="report-config-evidence"></p></div>
           <div id="report-annotation-actions" class="report-annotation-actions" hidden>
-            <a id="report-annotate-link" class="report-edit-link" href="annotate.html">Add comments or company details</a>
-            <span>Only the original GitHub submitter can have these changes accepted through a pull request.</span>
+            <a id="report-annotate-link" class="report-edit-link" href="annotate.html">Add a comment / choose CPU or I/O</a>
+            <span>Anyone can propose comments. Company and workload changes require the original submitter or a maintainer.</span>
           </div>
         </section>
         <section class="card">
@@ -448,14 +448,29 @@
               data.submitter_comments.forEach((comment)=>{
                 const p=document.createElement("p");
                 p.className="report-submitter-comment";
-                p.textContent=comment;
+                if (comment && typeof comment === "object") {
+                  const who = String(comment.github_username || "");
+                  if (ghRe.test(who)) {
+                    const link=document.createElement("a");
+                    link.href="https://github.com/"+encodeURIComponent(who);
+                    link.target="_blank";
+                    link.rel="noopener noreferrer";
+                    link.textContent="@"+who+": ";
+                    p.appendChild(link);
+                  }
+                  p.appendChild(document.createTextNode(String(comment.text || "")));
+                } else {
+                  p.textContent=String(comment);
+                }
                 wrapper.appendChild(p);
               });
             }
             const hasComments = Boolean(description || originalNotes ||
               (Array.isArray(data.submitter_comments) && data.submitter_comments.length));
             $("report-comments-empty").hidden = hasComments;
-            if (ghRe.test(String(username || "")) && source.job?.jobid) {
+            if (source.job?.jobid) {
+              $("report-annotate-link").textContent = bench === "TPROC-C"
+                ? "Add a comment / choose CPU or I/O" : "Add a comment";
               const target = new URL("annotate.html", location.href);
               target.searchParams.set("jobid", source.job.jobid);
               $("report-annotate-link").href = target.href;
@@ -471,7 +486,7 @@
             const badge = $("report-workload-badge");
             if (bench === "TPROC-C" && (validIo || validCpu)) {
               badge.className = "report-profile-badge " + (validIo ? "io" : "cpu");
-              badge.textContent = validIo ? "I/O-INTENSIVE · DECLARED" : "CPU-INTENSIVE · DECLARED";
+              badge.textContent = validIo ? "I/O-INTENSIVE" : "CPU-INTENSIVE";
               $("report-config-container").hidden = false;
               $("report-config-evidence").textContent = "UAW: " + (uaw ? "Enabled" : "Disabled") +
                 " · Durability: " + (durability === "full" ? "Full/synchronous" : "Relaxed") +

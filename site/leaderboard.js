@@ -157,7 +157,7 @@
       '<div class="configuration">' + chips + "</div></div>" +
       (row.result_description ? '<p class="card-description">' + esc(row.result_description) + "</p>" : "") +
       '<div class="card-bottom">' + identity(row) +
-      '<div class="card-actions">' + (sourceLink && row.attribution_source === "original-pr" ?
+      '<div class="card-actions"><a class="provenance-link" href="annotate.html?jobid=' + encodeURIComponent(row.jobid || "") + '">Comments' + (isC ? " / CPU-I/O" : "") + '</a>' + (sourceLink && row.attribution_source === "original-pr" ?
         '<a class="provenance-link" href="' + esc(sourceLink) + '" target="_blank" rel="noopener noreferrer">Original PR</a>' : "") +
       '<a class="report-link" href="' + esc(link) + '">View full report ↗</a></div></div>' + evidence(row) + "</article>";
   }
