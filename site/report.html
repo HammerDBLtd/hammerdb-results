@@ -186,8 +186,12 @@
   <body>
     <nav class="top">
       <div class="top-inner">
-        <a class="back" href="index.html">← Back to leaderboard</a
-        ><span class="label">HammerDB Result Artifact</span><button type="button" id="report-theme-toggle" class="report-theme-toggle">☀ Light mode</button>
+        <a class="back" href="index.html">← Leaderboard</a>
+        <div class="report-brand-group">
+          <a href="https://www.hammerdb.com/" class="report-white-logo" target="_blank" rel="noopener noreferrer"><img src="assets/images/hammerDB-H-logo-FINAL.png" alt="HammerDB"></a>
+          <strong class="report-title">HammerDB Benchmark Report</strong>
+          <a href="https://www.tpc.org/" class="report-white-logo" target="_blank" rel="noopener noreferrer"><img src="assets/images/tpclogo.png" alt="TPC"></a>
+        </div><button type="button" id="report-theme-toggle" class="report-theme-toggle">☀ Light mode</button>
       </div>
     </nav>
     <main class="wrap">
@@ -611,6 +615,12 @@
         } catch {
           fail("Invalid artifact path", "Could not resolve artifact URL.");
           return;
+        }
+        // Test-branch previews do not have Pages' generated site/results folder.
+        // Read the same artifact from the repository root without duplicating files.
+        if ((location.hostname === "raw.githack.com" || location.hostname === "rawcdn.githack.com")
+            && /^results\/[a-z0-9/_-]+\.json$/i.test(artifact)) {
+          artifactUrl = new URL("../" + artifact, location.href);
         }
         fetch(artifactUrl)
           .then((r) => {
