@@ -10,8 +10,6 @@
   <script defer src="leaderboard.js"></script>
 </head>
 <body>
-  <div class="ambient ambient-one" aria-hidden="true"></div>
-  <div class="ambient ambient-two" aria-hidden="true"></div>
   <header class="topbar">
     <div class="topbar-inner">
       <a class="brand" href="index.html" aria-label="HammerDB Results home">
@@ -26,24 +24,21 @@
     </div>
   </header>
   <main class="page">
-    <section class="hero-panel" aria-labelledby="page-title">
-      <div class="hero-text">
-        <div class="eyebrow"><span class="pulse"></span> OPEN PERFORMANCE DATA <span class="eyebrow-divider">/</span> TPROC-C + TPROC-H</div>
-        <h1 id="page-title">The numbers matter.<br><span class="gradient-text">So does the context.</span></h1>
-        <p>Explore real HammerDB benchmark submissions with transparent machine configurations, community attribution, optional company details and workload evidence.</p>
-        <div class="hero-actions">
-          <a class="action action-primary" href="#leaderboard">Explore leaderboard <span aria-hidden="true">↓</span></a>
-          <a class="action action-secondary" href="submit.html">Share your result</a>
+    <section class="masthead" aria-labelledby="page-title">
+      <div class="masthead-main">
+        <a class="masthead-logo-white" href="https://www.hammerdb.com/" target="_blank" rel="noopener noreferrer" aria-label="HammerDB website">
+          <img class="masthead-hammerdb" src="assets/images/hammerDB-H-logo-FINAL.png" alt="HammerDB">
+        </a>
+        <div class="masthead-heading">
+          <h1 id="page-title">HammerDB Benchmark Leaderboard</h1>
+          <p>Community-submitted TPROC-C and TPROC-H benchmark results</p>
+          <div class="masthead-links"><a href="#leaderboard">View results</a><a href="submit.html">Submit a benchmark</a></div>
         </div>
+        <a class="masthead-logo-white" href="https://www.tpc.org/" target="_blank" rel="noopener noreferrer" aria-label="TPC website">
+          <img class="masthead-tpc" src="assets/images/tpclogo.png" alt="Transaction Processing Performance Council">
+        </a>
       </div>
-      <aside class="hero-side" aria-label="About this leaderboard">
-        <div class="terminal-header"><span class="terminal-lights" aria-hidden="true">● ● ●</span> BENCHMARK CONTEXT</div>
-        <div class="terminal-row"><span>Metrics</span><strong>Throughput &amp; latency</strong></div>
-        <div class="terminal-row"><span>Evidence</span><strong>Original result artifacts</strong></div>
-        <div class="terminal-row"><span>Source</span><strong>GitHub submissions</strong></div>
-        <div class="terminal-row"><span>Classification</span><strong>Declared, never guessed</strong></div>
-        <div class="terminal-disclaimer">Community-submitted and unaudited. Not official TPC benchmark results.</div>
-      </aside>
+      <p class="masthead-note">Results are community-submitted and unaudited. They are not official TPC benchmark results.</p>
     </section>
     <section class="stats-grid" aria-label="Leaderboard summary">
       <div class="stat"><span class="stat-key">Published results</span><strong id="stat-results">—</strong><small>Benchmark artifacts</small></div>
@@ -54,7 +49,7 @@
 
     <section id="leaderboard" class="leaderboard-section">
       <div class="section-heading">
-        <div><div class="eyebrow">BENCHMARK EXPLORER</div><h2>Explore submissions</h2><p>Search by database, submitter, company or result description.</p></div>
+        <div><h2>Benchmark results</h2><p>Filter by benchmark, workload classification, or search for a database and submitter.</p></div>
         <div class="filter-counter" id="filter-count" aria-live="polite">Loading results…</div>
       </div>
       <div class="filter-bar">
