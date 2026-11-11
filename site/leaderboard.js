@@ -88,7 +88,7 @@
     const secondary = isC ? "TPM " + fmt(row.tpm) : "Total query time " + fmt(row.total_query_time_seconds, 2) + "s";
     const ratio = isC && topNopm > 0 ? Math.min(100, Math.max(0, Number(row.nopm || 0) / topNopm * 100)) : 0;
     const bar = isC ? '<div class="perf-track" role="img" aria-label="' + fmt(ratio, 1) +
-      '% of the best reported TPROC-C NOPM"><div class="perf-fill" style="width:' + ratio.toFixed(1) + '%"></div></div>' : "";
+      '% of the best reported TPROC-C NOPM in the same workload category"><div class="perf-fill" style="width:' + ratio.toFixed(1) + '%"></div></div>' : "";
     const chips = [
       ["Warehouses", row.warehouses],
       ["Virtual users", row.virtual_users],
@@ -145,13 +145,17 @@
     $("filter-count").textContent = visible.length + " of " + state.rows.length + " results";
     const c = order(visible.filter((r) => r.benchmark === "TPROC-C"));
     const h = order(visible.filter((r) => r.benchmark === "TPROC-H"));
-    const topNopm = Math.max(0, ...state.rows.filter((r) => r.benchmark === "TPROC-C").map((r) => Number(r.nopm || 0)));
+    const topByProfile = {};
+    state.rows.filter((r) => r.benchmark === "TPROC-C").forEach((r) => {
+      const profile = r.workload_class || "unclassified";
+      topByProfile[profile] = Math.max(topByProfile[profile] || 0, Number(r.nopm || 0));
+    });
     $("section-tproc-c").hidden = !c.length;
     $("section-tproc-h").hidden = !h.length;
     $("no-results").hidden = !!visible.length;
     $("count-c").textContent = "(" + c.length + ")";
     $("count-h").textContent = "(" + h.length + ")";
-    $("results-c").innerHTML = c.map((r, i) => card(r, i + 1, topNopm)).join("");
+    $("results-c").innerHTML = c.map((r, i) => card(r, i + 1, topByProfile[r.workload_class || "unclassified"] || 0)).join("");
     const hGroups = [];
     const byScale = new Map();
     h.forEach((r) => {
