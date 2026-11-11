@@ -1,8 +1,6 @@
-/* Resolve the repository that HOSTS the deployed leaderboard.
- * Development Pages: HammerDBLtd/hammerdb-results -> main
- * Published Pages:   TPC-Council/hammerdb-results -> main
- * GitHub Actions may provide an explicit deploy context for custom domains.
- * This script never writes to either repository.
+/* Resolve the repository hosting the deployed leaderboard.
+ * The publishing workflow supplies the repository context, including on custom domains.
+ * This script only constructs links; it does not write to GitHub.
  */
 (function () {
   "use strict";
@@ -26,7 +24,7 @@
     const match = location.pathname.match(/^\/(HammerDBLtd|TPC-Council)\/hammerdb-results\//i);
     if (match) owner = match[1];
   }
-  if (!owner) owner = "HammerDBLtd"; // local development; override for custom domain builds
+  if (!owner) owner = "TPC-Council"; // preview fallback when no deployment context is available
   owner = owner.toLowerCase() === "tpc-council" ? "TPC-Council" : "HammerDBLtd";
   if (!branch) branch = "main";
   const url = "https://github.com/" + owner + "/" + repo;

@@ -1,6 +1,6 @@
 # HammerDB Community Benchmark Results
 
-This is the **HammerDB Ltd development copy** of the [TPC-Council published results repository](https://github.com/TPC-Council/hammerdb-results). Development changes are made and tested in HammerDB Ltd. TPC-Council receives changes **only via an explicit contributor-created pull request and upstream maintainer review**, never an automatic mirror or direct push from this development copy. Fetching upstream results into HammerDB Ltd remains read-only.
+This repository publishes community-submitted HammerDB benchmark result artifacts and the leaderboard. Submissions and later comments are reviewed through GitHub pull requests. The artifacts are unaudited community results, not official TPC benchmark results.
 
 ## Leaderboard
 
@@ -29,8 +29,8 @@ The browser form is at `site/annotate.html?jobid=<id>`. It also accepts an optio
 Annotations are stored **separately** in `submissions/annotations/<jobid>.json`. They are rendered by the leaderboard build and never alter the original JSON result artifact. Historical upstream PR descriptions are recorded in `submissions/legacy-attribution.json` and shown separately as **Original PR notes**, not as new comments from the submitter.
 
 The GitHub editor link is determined by the deployment environment:
-- On **HammerDBLtd GitHub Pages**, it targets `HammerDBLtd/hammerdb-results` (`main`) for development.
-- On **TPC-Council GitHub Pages**, it targets `TPC-Council/hammerdb-results` (`main`) for the official PR.
+- The publishing workflow configures links for the repository and branch that hosts the deployed site.
+- On TPC-Council GitHub Pages, submissions and annotation pull requests target `TPC-Council/hammerdb-results` (`main`).
 - The commenter proposes the annotation through their own fork or branch; a maintainer reviews and merges it. The browser never writes directly to a repository.
 
 The original submitter's GitHub username is read from the published result/provenance. GitHub Actions checks **new comment attribution against the PR author**, and compares company and workload changes against the base branch: only the original submitter or a repository collaborator with write/maintain/admin permission can change them. Existing comments are append-only.
