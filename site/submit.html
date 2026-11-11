@@ -13,6 +13,7 @@
     })();
   </script>
   <title>Submit a benchmark · HammerDB Community Results</title>
+  <script src="repository.js"></script>
   <link rel="stylesheet" href="leaderboard.css">
   <style>
     .submit-branding{display:grid;grid-template-columns:105px minmax(0,1fr) 105px;align-items:center;gap:18px}.submit-branding h1{font-size:30px;line-height:1.15;margin:0 0 9px}.submit-branding .masthead-logo-white{height:90px;min-height:90px}.submit-branding .masthead-logo-white img{max-width:100%;max-height:72px;object-fit:contain}@media(max-width:630px){.submit-branding{grid-template-columns:64px 64px;gap:10px}.submit-branding>div{grid-column:1/-1;grid-row:2}.submit-branding .masthead-logo-white{height:70px;min-height:70px}}
@@ -72,7 +73,7 @@
   <div class="topbar-actions"><a class="nav-link" href="index.html">← Leaderboard</a><label class="theme-control" for="theme-select"><span>Theme</span><select id="theme-select" class="theme-select" aria-label="Colour theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label></div>
 </div></header>
 <main class="submission-page">
-  <div class="submit-header"><div class="submit-branding"><a class="masthead-logo-white" href="https://www.hammerdb.com/" target="_blank" rel="noopener noreferrer"><img src="assets/images/hammerDB-H-logo-FINAL.png" alt="HammerDB"></a><div><h1>Submit a HammerDB benchmark result</h1><p>Upload the saved JSON artifact, provide your GitHub username and optional configuration details, then open a pull request in HammerDB Ltd. No pipeline required.</p></div><a class="masthead-logo-white" href="https://www.tpc.org/" target="_blank" rel="noopener noreferrer"><img src="assets/images/tpclogo.png" alt="TPC"></a></div></div>
+  <div class="submit-header"><div class="submit-branding"><a class="masthead-logo-white" href="https://www.hammerdb.com/" target="_blank" rel="noopener noreferrer"><img src="assets/images/hammerDB-H-logo-FINAL.png" alt="HammerDB"></a><div><h1>Submit a HammerDB benchmark result</h1><p>Upload the saved JSON artifact, provide your GitHub username and optional configuration details, then open a pull request in the repository hosting this leaderboard. No pipeline required.</p></div><a class="masthead-logo-white" href="https://www.tpc.org/" target="_blank" rel="noopener noreferrer"><img src="assets/images/tpclogo.png" alt="TPC"></a></div></div>
   <div id="status" class="status-box" role="status" aria-live="polite"><strong>Ready</strong><p>Select a HammerDB result artifact to begin.</p></div>
   <div class="submit-flow">
     <div class="flow-main">
@@ -109,9 +110,9 @@
       <ol><li><strong>Choose the original artifact.</strong> No pipeline or additional config file is required to upload it.</li>
       <li><strong>Identify the submitter.</strong> Add your GitHub account, optional company logo and description.</li>
       <li><strong>Declare workload intent.</strong> For TPROC-C, record UAW and durability settings or leave it unclassified.</li>
-      <li><strong>Review on GitHub.</strong> Copy the enriched JSON, submit it in our development repository, and open a PR.</li></ol>
+      <li><strong>Review on GitHub.</strong> Copy the enriched JSON, submit it to the repository hosting this leaderboard, and open a PR.</li></ol>
       <div class="help-divider"></div>
-      <p><strong>Important:</strong> This development submission page targets <a href="https://github.com/HammerDBLtd/hammerdb-results">HammerDBLtd/hammerdb-results</a> only. It never writes to TPC-Council.</p>
+      <p><strong>Important:</strong> Submission target: <a data-repository-link href="https://github.com/HammerDBLtd/hammerdb-results"><span data-repository-name>Loading repository…</span></a>. On TPC-Council Pages, contributors propose changes by PR to TPC-Council. This form does not write files directly.</p>
       <p>UAW increases data-area I/O, but performance graphs alone cannot establish the workload category. <a href="https://www.hammerdb.com/docs/ch04s08.html" target="_blank" rel="noopener noreferrer">HammerDB UAW documentation</a>.</p>
     </aside>
   </div>
@@ -119,7 +120,7 @@
 <script>
 (() => {
   "use strict";
-  const TARGET_OWNER = "HammerDBLtd", TARGET_REPO = "hammerdb-results", TARGET_BRANCH = "master";
+  const {owner:TARGET_OWNER,repo:TARGET_REPO,branch:TARGET_BRANCH} = window.HammerDBResultsRepo;
   const $ = (id) => document.getElementById(id);
   const GH_USER = /^[a-z\d](?:[a-z\d-]{0,37}[a-z\d])?$/i;
   let artifact = null, resultPath = "", validationId = 0, ready = false;

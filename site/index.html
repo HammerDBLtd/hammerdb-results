@@ -14,6 +14,7 @@
   </script>
   <meta name="description" content="Community-submitted HammerDB benchmark results, including reproducibility details, GitHub submitters and declared workload configurations.">
   <title>HammerDB · Community Benchmark Leaderboard</title>
+  <script src="repository.js"></script>
   <link rel="stylesheet" href="leaderboard.css">
   <script defer src="leaderboard.js"></script>
 </head>
@@ -21,7 +22,7 @@
   <header class="topbar">
     <div class="topbar-inner">
       <div class="topbar-actions">
-        <a class="nav-link" href="https://github.com/HammerDBLtd/hammerdb-results" target="_blank" rel="noopener noreferrer">GitHub repository</a>
+        <a class="nav-link" data-repository-link href="https://github.com/HammerDBLtd/hammerdb-results" target="_blank" rel="noopener noreferrer">GitHub repository</a>
         <label class="theme-control" for="theme-select"><span>Theme</span><select id="theme-select" class="theme-select" aria-label="Colour theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
         <a class="action action-primary" href="submit.html">+ Submit a result</a>
       </div>
@@ -68,7 +69,7 @@
       <section id="section-tproc-h" class="benchmark-block" hidden aria-labelledby="heading-h"><div class="benchmark-heading"><div><span class="benchmark-kicker">OLAP · ANALYTICAL QUERIES</span><h3 id="heading-h">TPROC-H <span id="count-h" class="heading-count"></span></h3></div><span class="benchmark-unit">Lower geomean time is better · grouped by scale factor</span></div><div id="results-h" class="results-list"></div></section>
       <div id="no-results" class="no-results" hidden>No results match these filters. Try a different search or workload.</div>
     </section>
-    <footer class="footer"><span>HammerDB Community Results · Transparent benchmark artifacts</span><span><a href="https://github.com/HammerDBLtd/hammerdb-results" target="_blank" rel="noopener noreferrer">View source</a></span></footer>
+    <footer class="footer"><span>HammerDB Community Results · Transparent benchmark artifacts</span><span><a data-repository-link href="https://github.com/HammerDBLtd/hammerdb-results" target="_blank" rel="noopener noreferrer">View source</a></span></footer>
   </main>
 </body>
 </html>
