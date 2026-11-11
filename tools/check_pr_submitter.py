@@ -27,6 +27,8 @@ def main() -> int:
         print(f"Failed to retrieve PR changes: {exc.stderr}")
         return 1
 
+    manifest_path = ROOT / "submissions" / "legacy-attribution.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else {}
     errors = []
     found = 0
     for rel in diff.stdout.splitlines():
@@ -36,9 +38,21 @@ def main() -> int:
         payload = json.loads((ROOT / rel).read_text(encoding="utf-8"))
         submission = payload.get("submission") or {}
         username = submission.get("github_username")
-        if not isinstance(username, str) or username.casefold() != expected.casefold():
-            errors.append(f"{rel}: submitted by {username!r}; PR author is @{expected}. "
-                          "Use the authenticated GitHub account submitting this pull request.")
+        if isinstance(username, str) and username:
+            if username.casefold() != expected.casefold():
+                errors.append(f"{rel}: submitted by {username!r}; PR author is @{expected}. "
+                              "Use the authenticated GitHub account submitting this pull request.")
+        else:
+            # Already accepted upstream imports may have original PR attribution.
+            # TPC-Council remains strictly read-only.
+            jobid = (payload.get("job") or {}).get("jobid")
+            original = manifest.get(jobid, {})
+            url = original.get("pr_url", "") if isinstance(original, dict) else ""
+            original_user = original.get("github_username") if isinstance(original, dict) else None
+            if not original_user or not url.startswith("https://github.com/TPC-Council/hammerdb-results/pull/"):
+                errors.append(f"{rel}: missing submission.github_username. "
+                              "New results require the authenticated PR author's username. "
+                              "Imports of accepted upstream results require their original PR provenance.")
     if errors:
         print("GitHub submitter check failed:\n" + "\n".join(errors))
         return 1
