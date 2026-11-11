@@ -450,7 +450,7 @@
                 p.className="report-submitter-comment";
                 if (comment && typeof comment === "object") {
                   const who = String(comment.github_username || "");
-                  if (ghRe.test(who)) {
+                  if (/^[a-z\d](?:[a-z\d-]{0,37}[a-z\d])?(?:\[bot\])?$/i.test(who)) {
                     const link=document.createElement("a");
                     link.href="https://github.com/"+encodeURIComponent(who);
                     link.target="_blank";

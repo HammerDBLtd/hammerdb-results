@@ -32,6 +32,7 @@ def _legacy_attribution() -> dict:
 
 ANNOTATIONS_DIR = REPO_ROOT / "submissions" / "annotations"
 GH_LOGIN = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$")
+COMMENT_AUTHOR = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?(?:\[bot\])?$")
 JOB_IDENTIFIER = re.compile(r"^[A-Za-z0-9_-]{5,80}$")
 
 
@@ -77,7 +78,7 @@ def _annotations() -> dict[str, dict]:
                 author = comment.get("github_username")
                 text = comment.get("text")
                 valid = (
-                    isinstance(author, str) and bool(GH_LOGIN.fullmatch(author)) and "--" not in author
+                    isinstance(author, str) and bool(COMMENT_AUTHOR.fullmatch(author)) and "--" not in author
                     and isinstance(text, str) and bool(text.strip()) and len(text) <= 4000
                 )
             else:

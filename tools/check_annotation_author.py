@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-"""Only the original GitHub submitter may propose changes to later annotations.
+"""Validate comment attribution and ownership of annotation changes.
 
-Validate the author against the BASE branch version of the result/provenance.
-Never trust a provenance change included in the contributor's own PR.
+Compare with base-branch metadata rather than trusting fields modified by the PR.
 """
 from __future__ import annotations
 

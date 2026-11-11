@@ -213,7 +213,7 @@
     const description=$("company-description").value.trim();
     const comment=$("new-comment").value.trim();
     const author=$("comment-author").value.trim().replace(/^@/,"");
-    const gh=/^[a-z\d](?:[a-z\d-]{0,37}[a-z\d])?$/i;
+    const gh=/^[a-z\d](?:[a-z\d-]{0,37}[a-z\d])?(?:\[bot\])?$/i;
     if(comment && (!gh.test(author)||author.includes("--")))
       throw Error("Enter your GitHub login to attribute the new comment.");
     const comments=Array.isArray(row.submitter_comments)?row.submitter_comments.slice():[];
