@@ -29,7 +29,7 @@ The browser form is at `site/annotate.html?jobid=<id>`. It also accepts an optio
 Annotations are stored **separately** in `submissions/annotations/<jobid>.json`. They are rendered by the leaderboard build and never alter the original JSON result artifact. Historical upstream PR descriptions are recorded in `submissions/legacy-attribution.json` and shown separately as **Original PR notes**, not as new comments from the submitter.
 
 The GitHub editor link is determined by the deployment environment:
-- On **HammerDBLtd GitHub Pages**, it targets `HammerDBLtd/hammerdb-results` (`master`) for development.
+- On **HammerDBLtd GitHub Pages**, it targets `HammerDBLtd/hammerdb-results` (`main`) for development.
 - On **TPC-Council GitHub Pages**, it targets `TPC-Council/hammerdb-results` (`main`) for the official PR.
 - The commenter proposes the annotation through their own fork or branch; a maintainer reviews and merges it. The browser never writes directly to a repository.
 

@@ -3,7 +3,7 @@ name: Publish Leaderboard Prototype
 on:
   push:
     branches:
-      - master
+      - main
   workflow_dispatch:
 
 permissions:

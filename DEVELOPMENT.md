@@ -3,7 +3,7 @@
 ## Non-negotiable repository roles
 
 - **PUBLICATION REPOSITORY (NO DIRECT PUSH):** [TPC-Council/hammerdb-results](https://github.com/TPC-Council/hammerdb-results), branch `main`.
-- **DEVELOPMENT (WRITABLE):** [HammerDBLtd/hammerdb-results](https://github.com/HammerDBLtd/hammerdb-results), branch `master`.
+- **DEVELOPMENT (WRITABLE):** [HammerDBLtd/hammerdb-results](https://github.com/HammerDBLtd/hammerdb-results), branch `main`.
 - **Fetching results:** TPC-Council -> HammerDBLtd only; do not automatically mirror development changes or push directly to TPC-Council. **Publication:** contributors may deliberately open a PR to TPC-Council; only TPC maintainers merge it.
 - The two repositories are independent repositories, not registered GitHub forks.
 
@@ -14,8 +14,8 @@ The HammerDB Ltd working baseline takes its starting code and accepted results f
 HammerDB Ltd's previous `master` is preserved in `backup/master-before-tpc-sync-2026-11-11`.
 
 Differences intentionally retained in the development repository:
-- `.github/workflows/publish.yml` publishes from `master`, not upstream's `main`.
-- `site/repository.js` selects the deployed repository: HammerDB Ltd `master` in development, TPC-Council `main` on its public Pages deployment.
+- `.github/workflows/publish.yml` publishes this repository from `main`, matching the upstream branch name without sharing deployments or results.
+- `site/repository.js` selects the deployed repository: `main` on HammerDB Ltd in development and `main` on TPC-Council after upstream review.
 - `DEVELOPMENT.md` documents this read-only upstream arrangement.
 
 ## Work only in HammerDB Ltd
@@ -23,7 +23,7 @@ Differences intentionally retained in the development repository:
 ```sh
 git clone https://github.com/HammerDBLtd/hammerdb-results.git
 cd hammerdb-results
-git switch master
+git switch main
 git pull --ff-only
 git switch -c feature/my-change
 # Make changes and validate in this repository only
@@ -42,7 +42,7 @@ Develop and review code in **HammerDBLtd/hammerdb-results**. When it is delibera
 When newer accepted upstream results or fixes are needed:
 
 1. Fetch TPC Council `main` strictly for reading; never push to that remote.
-2. Compare its current files against HammerDB Ltd `master`.
+2. Compare its current files against HammerDB Ltd `main`.
 3. On a new **HammerDB Ltd** sync branch, import only desired upstream changes while preserving development changes and HammerDB Ltd-specific URLs and workflow branch.
 4. Run validation and tests. Integrate the incoming changes in HammerDB Ltd; do not auto-push to TPC.
 

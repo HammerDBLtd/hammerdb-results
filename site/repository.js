@@ -1,5 +1,5 @@
 /* Resolve the repository that HOSTS the deployed leaderboard.
- * Development Pages: HammerDBLtd/hammerdb-results -> master
+ * Development Pages: HammerDBLtd/hammerdb-results -> main
  * Published Pages:   TPC-Council/hammerdb-results -> main
  * GitHub Actions may provide an explicit deploy context for custom domains.
  * This script never writes to either repository.
@@ -12,7 +12,7 @@
   let branch = "";
   const context = window.HammerDBResultsDeploy;
   if (context && /^(HammerDBLtd|TPC-Council)$/i.test(context.owner) &&
-      context.repo === "hammerdb-results" && /^(master|main)$/.test(context.branch)) {
+      context.repo === "hammerdb-results" && /^main$/.test(context.branch)) {
     owner = context.owner;
     branch = context.branch;
   } else if (host === "tpc-council.github.io") {
@@ -28,7 +28,7 @@
   }
   if (!owner) owner = "HammerDBLtd"; // local development; override for custom domain builds
   owner = owner.toLowerCase() === "tpc-council" ? "TPC-Council" : "HammerDBLtd";
-  if (!branch) branch = owner === "TPC-Council" ? "main" : "master";
+  if (!branch) branch = "main";
   const url = "https://github.com/" + owner + "/" + repo;
   window.HammerDBResultsRepo = Object.freeze({owner, repo, branch, url, fullName:owner+"/"+repo});
 
