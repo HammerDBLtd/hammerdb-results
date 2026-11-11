@@ -7,6 +7,7 @@
   <title>Submit a benchmark · HammerDB Community Results</title>
   <link rel="stylesheet" href="leaderboard.css">
   <style>
+    .submit-branding{display:grid;grid-template-columns:105px minmax(0,1fr) 105px;align-items:center;gap:18px}.submit-branding h1{font-size:30px;line-height:1.15;margin:0 0 9px}.submit-branding .masthead-logo-white{height:90px;min-height:90px}.submit-branding .masthead-logo-white img{max-width:100%;max-height:72px;object-fit:contain}@media(max-width:630px){.submit-branding{grid-template-columns:64px 64px;gap:10px}.submit-branding>div{grid-column:1/-1;grid-row:2}.submit-branding .masthead-logo-white{height:70px;min-height:70px}}
     .submission-page{max-width:1120px;margin:30px auto 70px;padding:0 25px}
     .submit-header{padding:34px 38px;background:linear-gradient(118deg,var(--surface),var(--surface-soft));border:1px solid var(--border);border-radius:22px;margin-bottom:20px}
     .submit-header h1{font-size:clamp(30px,3.8vw,46px);margin:10px 0}
@@ -64,7 +65,7 @@
   <div class="topbar-actions"><a class="nav-link" href="index.html">← Leaderboard</a><button class="theme-toggle" type="button" id="theme-toggle" aria-label="Switch colour theme">☀ Light mode</button></div>
 </div></header>
 <main class="submission-page">
-  <div class="submit-header"><div class="eyebrow"><span class="pulse"></span> PUBLISH YOUR BENCHMARK EVIDENCE</div><h1>Tell the story behind <span class="gradient-text">your result.</span></h1><p>Share the original HammerDB JSON artifact and add transparent attribution, optional company information and workload methodology. Pipeline execution is not required.</p></div>
+  <div class="submit-header"><div class="submit-branding"><a class="masthead-logo-white" href="https://www.hammerdb.com/" target="_blank" rel="noopener noreferrer"><img src="assets/images/hammerDB-H-logo-FINAL.png" alt="HammerDB"></a><div><h1>Submit a HammerDB benchmark result</h1><p>Upload the saved JSON artifact, provide your GitHub username and optional configuration details, then open a pull request in HammerDB Ltd. No pipeline required.</p></div><a class="masthead-logo-white" href="https://www.tpc.org/" target="_blank" rel="noopener noreferrer"><img src="assets/images/tpclogo.png" alt="TPC"></a></div></div>
   <div id="status" class="status-box" role="status" aria-live="polite"><strong>Ready</strong><p>Select a HammerDB result artifact to begin.</p></div>
   <div class="submit-flow">
     <div class="flow-main">
