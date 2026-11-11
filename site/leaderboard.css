@@ -158,3 +158,11 @@ h1{font-size:clamp(34px,4vw,57px);line-height:1.08;letter-spacing:-.055em;font-w
 .leaderboard-section{padding-top:24px}
 @media(max-width:780px){.masthead{padding:17px}.masthead-main{grid-template-columns:88px minmax(0,1fr) 88px;gap:12px}.masthead-logo-white{padding:8px;min-height:78px}.masthead-logo-white img{max-height:62px}.masthead-heading h1{font-size:24px}.masthead-heading p{font-size:12px}}
 @media(max-width:530px){.masthead-main{grid-template-columns:88px 88px;justify-content:start;gap:10px}.masthead-heading{grid-column:1 / -1;grid-row:2}.masthead-logo-white{min-height:75px}.masthead-heading h1{font-size:26px}.masthead-note{margin-top:14px}}
+
+/* Compact navigation: logos appear only once, in the main white-backed masthead. */
+.topbar-inner{justify-content:flex-end}
+.theme-control{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px;font-weight:750}
+.theme-select{min-height:40px;background:var(--surface-raised);border:1px solid var(--border);border-radius:9px;padding:8px 10px;color:var(--text);cursor:pointer}
+.theme-select:focus-visible{outline:2px solid var(--accent)}
+.masthead-note{max-width:1100px;line-height:1.58}
+@media(max-width:550px){.theme-control>span{display:none}.theme-select{min-height:38px;padding:6px}}

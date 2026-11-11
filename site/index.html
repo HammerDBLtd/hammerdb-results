@@ -1,9 +1,17 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="color-scheme" content="dark light">
+  <meta name="color-scheme" content="light dark">
+  <script>
+    (() => {
+      let choice = "system";
+      try { choice = localStorage.getItem("hammerdb-results-theme") || "system"; } catch (e) {}
+      const systemDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+      document.documentElement.dataset.theme = (choice === "dark" || choice === "light") ? choice : (systemDark ? "dark" : "light");
+    })();
+  </script>
   <meta name="description" content="Community-submitted HammerDB benchmark results, including reproducibility details, GitHub submitters and declared workload configurations.">
   <title>HammerDB · Community Benchmark Leaderboard</title>
   <link rel="stylesheet" href="leaderboard.css">
@@ -12,13 +20,9 @@
 <body>
   <header class="topbar">
     <div class="topbar-inner">
-      <a class="brand" href="index.html" aria-label="HammerDB Results home">
-        <img src="assets/images/hammerDB-H-logo-FINAL.png" alt="" width="44" height="44">
-        <span class="brand-type"><strong>HammerDB</strong><small>COMMUNITY RESULTS</small></span>
-      </a>
       <div class="topbar-actions">
         <a class="nav-link" href="https://github.com/HammerDBLtd/hammerdb-results" target="_blank" rel="noopener noreferrer">GitHub repository</a>
-        <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Switch colour theme">☀ Light mode</button>
+        <label class="theme-control" for="theme-select"><span>Theme</span><select id="theme-select" class="theme-select" aria-label="Colour theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
         <a class="action action-primary" href="submit.html">+ Submit a result</a>
       </div>
     </div>
@@ -38,7 +42,7 @@
           <img class="masthead-tpc" src="assets/images/tpclogo.png" alt="Transaction Processing Performance Council">
         </a>
       </div>
-      <p class="masthead-note">Results are community-submitted and unaudited. They are not official TPC benchmark results.</p>
+      <p class="masthead-note">HammerDB artifacts are best used for directional analysis and configuration learning. They are not designed to provide the same level of methodological control, disclosure depth, or comparability as formal TPC benchmark publications, and cross-system conclusions require full configuration and methodology review.</p>
     </section>
     <section class="stats-grid" aria-label="Leaderboard summary">
       <div class="stat"><span class="stat-key">Published results</span><strong id="stat-results">—</strong><small>Benchmark artifacts</small></div>
@@ -64,7 +68,7 @@
       <section id="section-tproc-h" class="benchmark-block" hidden aria-labelledby="heading-h"><div class="benchmark-heading"><div><span class="benchmark-kicker">OLAP · ANALYTICAL QUERIES</span><h3 id="heading-h">TPROC-H <span id="count-h" class="heading-count"></span></h3></div><span class="benchmark-unit">Lower geomean time is better · grouped by scale factor</span></div><div id="results-h" class="results-list"></div></section>
       <div id="no-results" class="no-results" hidden>No results match these filters. Try a different search or workload.</div>
     </section>
-    <footer class="footer"><span>HammerDB Community Results · Transparent benchmark artifacts</span><span>Results are user-submitted, unaudited and not official TPC benchmark results. <a href="https://github.com/HammerDBLtd/hammerdb-results" target="_blank" rel="noopener noreferrer">View source</a></span></footer>
+    <footer class="footer"><span>HammerDB Community Results · Transparent benchmark artifacts</span><span><a href="https://github.com/HammerDBLtd/hammerdb-results" target="_blank" rel="noopener noreferrer">View source</a></span></footer>
   </main>
 </body>
 </html>

@@ -21,20 +21,62 @@
         ? parsed.href : null;
     } catch (error) { return null; }
   }
-  function showTheme(theme) {
-    const selected = theme === "light" ? "light" : "dark";
-    document.documentElement.dataset.theme = selected;
-    $("theme-toggle").textContent = selected === "dark" ? "☀ Light mode" : "☾ Dark mode";
-    $("theme-toggle").setAttribute("aria-label", selected === "dark" ? "Switch to light mode" : "Switch to dark mode");
+  const colourMedia = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+  function themeChoice() {
+    try { return localStorage.getItem("hammerdb-results-theme") || "system"; } catch (e) { return "system"; }
   }
-  try { showTheme(localStorage.getItem("hammerdb-results-theme") || "dark"); }
-  catch (error) { showTheme("dark"); }
-  $("theme-toggle").addEventListener("click", () => {
-    const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
-    showTheme(next);
-    try { localStorage.setItem("hammerdb-results-theme", next); } catch (error) {}
+  function showTheme(choice) {
+    const selected = ["system","dark","light"].includes(choice) ? choice : "system";
+    const resolved = selected === "system" ? (colourMedia?.matches ? "dark" : "light") : selected;
+    document.documentElement.dataset.theme = resolved;
+    $("theme-select").value = selected;
+  }
+  showTheme(themeChoice());
+  $("theme-select").addEventListener("change", (event) => {
+    const choice = event.target.value;
+    try { if (choice === "system") localStorage.removeItem("hammerdb-results-theme");
+          else localStorage.setItem("hammerdb-results-theme",choice); } catch (e) {}
+    showTheme(choice);
+  });
+  colourMedia?.addEventListener?.("change", () => {
+    if (themeChoice() === "system") showTheme("system");
   });
 
+  // Report artifacts are small immutable JSON files. Warm the browser cache as
+  // results approach the viewport so opening a report need not wait on a new GET.
+  const loadedReports = new Set();
+  let reportObserver;
+  function prefetchReport(link) {
+    if (navigator.connection?.saveData) return;
+    const path = new URL(link.href).searchParams.get("artifact");
+    if (!path || !/^results\/[a-z0-9/_-]+\.json$/i.test(path) || loadedReports.has(path)) return;
+    loadedReports.add(path);
+    fetch(new URL(path,new URL("./",location.href)), {cache:"force-cache"})
+      .then((response) => response.ok ? response.json() : null)
+      .then((artifact) => {
+        if (!artifact || !artifact.job) return;
+        try { sessionStorage.setItem("hammerdb-report-v1:"+path,
+              JSON.stringify({at:Date.now(),body:artifact})); } catch (e) {}
+      })
+      .catch(() => loadedReports.delete(path));
+  }
+  function observeReportLinks() {
+    reportObserver?.disconnect();
+    const links = [...document.querySelectorAll("a.report-link")];
+    for (const link of links) {
+      link.addEventListener("pointerenter",() => prefetchReport(link),{once:true});
+      link.addEventListener("focus",() => prefetchReport(link),{once:true});
+    }
+    if (!navigator.connection?.saveData && "IntersectionObserver" in window) {
+      reportObserver = new IntersectionObserver((entries) => {
+        for(const entry of entries)if(entry.isIntersecting) {
+          prefetchReport(entry.target);
+          reportObserver.unobserve(entry.target);
+        }
+      },{rootMargin:"500px 0px"});
+      links.forEach((link) => reportObserver.observe(link));
+    }
+  }
   function badge(row) {
     if (row.benchmark !== "TPROC-C") return "";
     const type = row.workload_class || "unclassified";
@@ -168,6 +210,7 @@
         group.map((r, i) => card(r, i + 1, 0)).join(""));
     });
     $("results-h").innerHTML = hGroups.join("");
+    observeReportLinks();
   }
 
   ["search-input", "benchmark-filter", "workload-filter", "sort-filter"].forEach((id) => {
@@ -180,6 +223,7 @@
   }).then((data) => {
     if (!data || !Array.isArray(data.rows)) throw Error("Invalid leaderboard data");
     state.rows = data.rows;
+    try { sessionStorage.setItem("hammerdb-leaderboard-v1",JSON.stringify({at:Date.now(),rows:data.rows})); } catch (e) {}
     const dbCount = new Set(state.rows.map((r) => r.database_display || r.database)).size;
     const ghCount = new Set(state.rows.map((r) => r.submitted_by).filter((r) => r && GH_USER.test(r))).size;
     $("stat-results").textContent = fmt(state.rows.length);

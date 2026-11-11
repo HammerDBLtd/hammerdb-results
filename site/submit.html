@@ -1,9 +1,17 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="color-scheme" content="dark light">
+  <meta name="color-scheme" content="light dark">
+  <script>
+    (() => {
+      let choice = "system";
+      try { choice = localStorage.getItem("hammerdb-results-theme") || "system"; } catch (e) {}
+      const systemDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+      document.documentElement.dataset.theme = (choice === "dark" || choice === "light") ? choice : (systemDark ? "dark" : "light");
+    })();
+  </script>
   <title>Submit a benchmark · HammerDB Community Results</title>
   <link rel="stylesheet" href="leaderboard.css">
   <style>
@@ -61,8 +69,7 @@
 </head>
 <body>
 <header class="topbar"><div class="topbar-inner">
-  <a class="brand" href="index.html"><img src="assets/images/hammerDB-H-logo-FINAL.png" alt="" width="44" height="44"><span class="brand-type"><strong>HammerDB</strong><small>COMMUNITY RESULTS</small></span></a>
-  <div class="topbar-actions"><a class="nav-link" href="index.html">← Leaderboard</a><button class="theme-toggle" type="button" id="theme-toggle" aria-label="Switch colour theme">☀ Light mode</button></div>
+  <div class="topbar-actions"><a class="nav-link" href="index.html">← Leaderboard</a><label class="theme-control" for="theme-select"><span>Theme</span><select id="theme-select" class="theme-select" aria-label="Colour theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label></div>
 </div></header>
 <main class="submission-page">
   <div class="submit-header"><div class="submit-branding"><a class="masthead-logo-white" href="https://www.hammerdb.com/" target="_blank" rel="noopener noreferrer"><img src="assets/images/hammerDB-H-logo-FINAL.png" alt="HammerDB"></a><div><h1>Submit a HammerDB benchmark result</h1><p>Upload the saved JSON artifact, provide your GitHub username and optional configuration details, then open a pull request in HammerDB Ltd. No pipeline required.</p></div><a class="masthead-logo-white" href="https://www.tpc.org/" target="_blank" rel="noopener noreferrer"><img src="assets/images/tpclogo.png" alt="TPC"></a></div></div>
@@ -118,18 +125,23 @@
   let artifact = null, resultPath = "", validationId = 0, ready = false;
   const fields = ["github-username", "company-name", "company-logo", "company-description", "result-description", "workload-class", "uaw-setting", "durability-setting", "workload-details"];
 
-  function theme(mode) {
-    const value = mode === "light" ? "light" : "dark";
-    document.documentElement.dataset.theme = value;
-    $("theme-toggle").textContent = value === "dark" ? "☀ Light mode" : "☾ Dark mode";
+  const themeMedia = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+  function themeChoice() {
+    try { return localStorage.getItem("hammerdb-results-theme") || "system"; } catch (e) { return "system"; }
   }
-  try { theme(localStorage.getItem("hammerdb-results-theme") || "dark"); }
-  catch (error) { theme("dark"); }
-  $("theme-toggle").addEventListener("click", () => {
-    const mode = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
-    theme(mode);
-    try { localStorage.setItem("hammerdb-results-theme", mode); } catch (error) {}
+  function theme(choice) {
+    const selected = ["system","light","dark"].includes(choice) ? choice : "system";
+    document.documentElement.dataset.theme = selected === "system" ? (themeMedia?.matches ? "dark" : "light") : selected;
+    $("theme-select").value = selected;
+  }
+  theme(themeChoice());
+  $("theme-select").addEventListener("change", (event) => {
+    const choice = event.target.value;
+    try { if (choice === "system") localStorage.removeItem("hammerdb-results-theme");
+          else localStorage.setItem("hammerdb-results-theme",choice); } catch (e) {}
+    theme(choice);
   });
+  themeMedia?.addEventListener?.("change",() => { if (themeChoice() === "system") theme("system"); });
 
   function status(title, message, kind) {
     $("status").className = "status-box" + (kind ? " " + kind : "");
