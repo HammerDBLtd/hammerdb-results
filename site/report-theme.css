@@ -54,3 +54,8 @@ table th,table td{border-bottom-color:var(--line)}
 #content>.card>h2:not(.report-submission-heading h2){letter-spacing:-.025em}
 @media(max-width:840px){.report-white-logo{min-width:53px;height:47px;padding:5px}.report-white-logo img{max-width:67px;max-height:34px}.report-title{font-size:12px}.report-brand-group{gap:8px}}
 @media(max-width:590px){.report-title{display:none}.top-inner{gap:7px}.report-brand-group{margin:0 auto;gap:6px}.back{padding:7px 9px;font-size:12px}.report-theme-toggle{padding:6px 8px;font-size:12px}.chart-box{height:250px}}
+
+/* Explain the non-Tukey whiskers rather than implying raw samples exist. */
+.chart-key{font-size:11px;line-height:1.5;color:var(--muted);margin:2px 8px 10px}
+.chart-key[hidden]{display:none!important}
+.percentile-box{cursor:help}
