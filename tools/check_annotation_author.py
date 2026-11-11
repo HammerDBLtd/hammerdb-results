@@ -157,7 +157,12 @@ def main() -> int:
             except (OSError, ValueError, json.JSONDecodeError) as exc:
                 errors.append(f"{path}: {exc}")
                 continue
-            if original and original.casefold() != author.casefold() and maintainer is None:
+            changes_metadata = isinstance(annotation, dict) and (
+                annotation.get("company") != (previous or {}).get("company", {})
+                or annotation.get("workload") != (previous or {}).get("workload")
+            )
+            if (original and original.casefold() != author.casefold()
+                    and changes_metadata and maintainer is None):
                 maintainer = repository_maintainer(author)
             errors.extend(annotation_change_errors(
                 path, annotation, previous, original or "", author, bool(maintainer),

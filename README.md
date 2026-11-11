@@ -22,16 +22,18 @@ The submission flow preserves the original result fields (`job`, `benchmark_conf
 
 ## Add comments after publication
 
-Original submitters may use **Add or update comments / company details** on their published report. The browser form is at `site/annotate.html?jobid=<id>`. It lets them supply a public HTTPS company logo, organisation name and description, and append detailed benchmark comments.
+**Anyone may add a comment** on a published report by choosing **Comments / CPU-I/O** and opening a pull request. Each new comment records the authenticated PR author. **The original submitter or a repository maintainer with write access** may also change company details and choose **Not classified / CPU-intensive / I/O-intensive**, including the UAW and durability evidence required for classified TPROC-C results.
+
+The browser form is at `site/annotate.html?jobid=<id>`. It also accepts an optional public HTTPS logo URL and company description; measured result artifacts remain unchanged.
 
 Annotations are stored **separately** in `submissions/annotations/<jobid>.json`. They are rendered by the leaderboard build and never alter the original JSON result artifact. Historical upstream PR descriptions are recorded in `submissions/legacy-attribution.json` and shown separately as **Original PR notes**, not as new comments from the submitter.
 
 The GitHub editor link is determined by the deployment environment:
 - On **HammerDBLtd GitHub Pages**, it targets `HammerDBLtd/hammerdb-results` (`master`) for development.
 - On **TPC-Council GitHub Pages**, it targets `TPC-Council/hammerdb-results` (`main`) for the official PR.
-- The original submitter proposes the annotation through their own fork or branch; a maintainer reviews and merges it. The browser never writes directly to a repository.
+- The commenter proposes the annotation through their own fork or branch; a maintainer reviews and merges it. The browser never writes directly to a repository.
 
-The original submitter's GitHub username is read from the published result/provenance and verified by GitHub Actions **against the PR author and the base branch's original result**, so contributors cannot claim another person's submission by editing its metadata.
+The original submitter's GitHub username is read from the published result/provenance. GitHub Actions checks **new comment attribution against the PR author**, and compares company and workload changes against the base branch: only the original submitter or a repository collaborator with write/maintain/admin permission can change them. Existing comments are append-only.
 
 The GitHub Actions PR validation checks new result artifacts' declared GitHub username against the authenticated PR author. Imports of already accepted upstream artifacts can instead cite the verified original PR in the legacy attribution map.
 

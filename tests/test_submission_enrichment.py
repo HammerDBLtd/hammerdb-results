@@ -237,5 +237,104 @@ class SubmissionMetadataTests(unittest.TestCase):
 
 
 
+    def test_public_comment_has_authenticated_attribution_and_preserves_metadata(self):
+        from check_annotation_author import annotation_change_errors
+        path = "submissions/annotations/SUBMIT123.json"
+        current = {
+            "jobid": "SUBMIT123", "github_username": "original-pr-user",
+            "company": {},
+            "comments": [{"github_username": "independent-reviewer", "text": "I tested the same database."}],
+        }
+        self.assertEqual([], annotation_change_errors(
+            path, current, None, "original-pr-user", "independent-reviewer", False
+        ))
+        current["comments"][0]["github_username"] = "another-person"
+        self.assertIn("authenticated PR author's login", " ".join(annotation_change_errors(
+            path, current, None, "original-pr-user", "independent-reviewer", False
+        )))
+
+    def test_ordinary_user_cannot_change_company_or_classification(self):
+        from check_annotation_author import annotation_change_errors
+        path = "submissions/annotations/SUBMIT123.json"
+        payload = {
+            "jobid": "SUBMIT123",
+            "github_username": "original-pr-user",
+            "company": {"name": "Example Co"},
+            "workload": {
+                "classification": "io-intensive",
+                "use_all_warehouses": True, "durability": "full",
+                "details": "Full synchronous durability and UAW explicitly enabled.",
+            },
+            "comments": [{"github_username": "guest-user", "text": "A useful observation"}],
+        }
+        errors = " ".join(annotation_change_errors(
+            path, payload, None, "original-pr-user", "guest-user", False
+        ))
+        self.assertIn("only the original submitter or a maintainer", errors)
+        self.assertIn("company details", errors)
+        self.assertIn("workload classification", errors)
+
+    def test_maintainer_can_update_company_and_cpu_io_profile(self):
+        from check_annotation_author import annotation_change_errors
+        path = "submissions/annotations/SUBMIT123.json"
+        original_note = {
+            "jobid": "SUBMIT123", "github_username": "original-pr-user",
+            "company": {"name": "Company A"},
+            "comments": [{"github_username": "original-pr-user", "text": "Original comment"}],
+        }
+        updated = {
+            **original_note,
+            "company": {"name": "Company A", "description": "Company description"},
+            "workload": {
+                "classification": "cpu-intensive",
+                "use_all_warehouses": False, "durability": "relaxed",
+                "details": "UAW disabled and asynchronous transactions for CPU-oriented run.",
+            },
+            "comments": original_note["comments"] + [
+                {"github_username": "repo-maintainer", "text": "Verified performance settings"}
+            ],
+        }
+        self.assertEqual([], annotation_change_errors(
+            path, updated, original_note, "original-pr-user", "repo-maintainer", True
+        ))
+        updated["comments"][0] = {"github_username": "repo-maintainer", "text": "Edited old comment"}
+        self.assertIn("earlier comments cannot be edited", " ".join(annotation_change_errors(
+            path, updated, original_note, "original-pr-user", "repo-maintainer", True
+        )))
+
+    def test_annotation_cpu_io_badge_from_separate_json(self):
+        artifact = sample_result()
+        self.save(artifact)
+        at = self.root / "submissions"
+        (at / "annotations").mkdir(parents=True)
+        (at / "legacy-attribution.json").write_text(
+            json.dumps({"SUBMIT123": {"github_username": "original-pr-user"}}),
+            encoding="utf-8",
+        )
+        (at / "annotations" / "SUBMIT123.json").write_text(json.dumps({
+            "jobid": "SUBMIT123",
+            "github_username": "original-pr-user",
+            "comments": [{"github_username": "review-user", "text": "Follow-up observations"}],
+            "workload": {
+                "classification": "io-intensive",
+                "use_all_warehouses": True,
+                "durability": "full",
+                "details": "Synchronous durability configured with all warehouses enabled.",
+            },
+        }), encoding="utf-8")
+        original_root, original_results = build_leaderboard.REPO_ROOT, build_leaderboard.RESULTS_ROOT
+        try:
+            build_leaderboard.REPO_ROOT = self.root
+            build_leaderboard.RESULTS_ROOT = self.results
+            row = build_leaderboard._load_rows()[0]
+            self.assertEqual("io-intensive", row["workload_class"])
+            self.assertEqual(True, row["workload_uaw"])
+            self.assertEqual("full", row["workload_durability"])
+            self.assertEqual("review-user", row["submitter_comments"][0]["github_username"])
+        finally:
+            build_leaderboard.REPO_ROOT, build_leaderboard.RESULTS_ROOT = original_root, original_results
+
+
+
 if __name__ == "__main__":
     unittest.main()
