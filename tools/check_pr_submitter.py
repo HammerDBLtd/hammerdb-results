@@ -11,6 +11,17 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 
+def is_service_pr(expected: str, app_bot: str, head_ref: str,
+                  head_repo: str, target_repo: str) -> bool:
+    """Trust the service identity only for its exact bot on a same-repo branch."""
+    return bool(
+        app_bot and expected.casefold() == app_bot.casefold()
+        and head_ref.startswith("submission/")
+        and head_repo.casefold() == target_repo.casefold()
+        and target_repo
+    )
+
+
 def main() -> int:
     expected = os.environ.get("EXPECTED_PR_AUTHOR", "").strip()
     base = os.environ.get("BASE_SHA", "").strip()
@@ -38,12 +49,7 @@ def main() -> int:
     head_ref = os.environ.get("PR_HEAD_REF", "").strip()
     head_repo = os.environ.get("PR_HEAD_REPO", "").strip()
     target_repo = os.environ.get("GITHUB_REPOSITORY", "").strip()
-    service_pr = bool(
-        app_bot and expected.casefold() == app_bot.casefold()
-        and head_ref.startswith("submission/")
-        and head_repo.casefold() == target_repo.casefold()
-        and target_repo
-    )
+    service_pr = is_service_pr(expected, app_bot, head_ref, head_repo, target_repo)
     for rel in diff.stdout.splitlines():
         if not rel.startswith("results/") or not rel.endswith(".json"):
             continue
