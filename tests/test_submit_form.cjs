@@ -224,7 +224,7 @@ test("a first-time contributor gets a clear fork name BEFORE navigating to GitHu
   assert.equal(p.tabs[1].navigated,"https://github.com/HammerDBLtd/hammerdb-results/fork");
   assert.equal(p.copied.at(-1),"hammerdb-results");
   assert.ok(p.requests.some(url=>url.startsWith("https://api.github.com/users/newperson/repos?")));
-  assert.equal(p.copied.length,1);
+  assert.equal(p.copied.length,2,"The result JSON and fork name must both be copied");
   assert.ok(p.backingStorage.has("hammerdb-results-submission-draft:hammerdbltd/hammerdb-results"));
 });
 
