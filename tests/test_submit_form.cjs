@@ -34,7 +34,7 @@ class Element {
     }[this.id]||"";
   }
   get selectedIndex(){return this.index??0}
-  click(){for(const fn of this.events.get("click")||[])fn()}
+  click(){this.clicked=true;for(const fn of this.events.get("click")||[])fn()}
   focus(){this.focused=true}
   select(){this.selected=true}
   setAttribute(){}
