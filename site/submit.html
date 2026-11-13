@@ -125,7 +125,7 @@
         <div class="submit-actions"><button type="button" class="action action-primary" id="continue-github">Submit result ↗</button></div>
         <p class="field-note">Your result will be reviewed through a GitHub pull request. It appears on the leaderboard after approval.</p>
         <p class="field-note"><strong>GitHub issue:</strong> GitHub's in-editor “Fork” button sometimes fails with HTTP 422. This form checks for an existing fork first; if needed, it opens GitHub's direct fork page instead.</p>
-        <div id="fork-feedback" class="fork-feedback" role="status" aria-live="polite" hidden><strong id="fork-feedback-title"></strong><p id="fork-feedback-message"></p><div id="fork-create-guide" class="fork-create-guide" hidden><p>If GitHub asks for a repository name, use <strong id="required-fork-name"></strong>. <button type="button" id="copy-fork-name">Copy name</button></p></div><a id="fork-feedback-link" href="#" target="_blank" rel="noopener noreferrer" hidden>Continue on GitHub</a></div>
+        <div id="fork-feedback" class="fork-feedback" role="status" aria-live="polite" hidden><strong id="fork-feedback-title"></strong><p id="fork-feedback-message"></p><div id="fork-create-guide" class="fork-create-guide" hidden><p id="fork-create-instructions"></p><p><strong>GitHub owner:</strong> <code id="fork-account"></code>. <strong>Repository name:</strong> <code id="required-fork-name"></code> <button type="button" id="copy-fork-name">Copy name</button></p><button type="button" class="action action-primary" id="open-fork-page">Copy name and open GitHub fork page ↗</button></div><a id="fork-feedback-link" href="#" target="_blank" rel="noopener noreferrer" hidden>Continue on GitHub</a></div>
         <div id="submission-progress" class="fork-feedback submission-progress" data-stage="idle" role="status" aria-live="polite" hidden><strong id="submission-progress-title"></strong><p id="submission-progress-detail"></p><div class="submit-actions"><button type="button" class="action action-primary" id="finish-pr">Open pull request ↗</button><a id="pr-link" class="action action-primary" href="#" target="_blank" rel="noopener noreferrer" hidden>Open pull request ↗</a></div></div>
         <details class="raw-preview"><summary>Result backup and troubleshooting</summary><div class="submit-actions"><button type="button" class="copy-button" id="copy-json">Copy JSON</button><button type="button" class="copy-button" id="download-json">Download JSON</button><button type="button" class="file-choose" id="clear-draft">Clear saved draft</button></div><p id="draft-status" class="draft-status">Your result and details are saved in this browser during GitHub setup.</p><pre id="generated-json">Select an artifact to preview.</pre></details>
       </section>
@@ -655,12 +655,17 @@
     saveDraft();
     const different=Boolean(destination.collision);
     const message=different
-      ? "Your existing fork belongs to another repository. Create a fork with the name below, then return and click Submit result again."
-      : "Create your fork on GitHub, then return and click Submit result again.";
-    showForkFeedback("Create your GitHub fork",message,
-      copied?"success":"error",forkUrl,"Open GitHub fork page");
-    $("fork-create-guide").hidden=!different;
+      ? "Your existing "+destination.collision+" repository is already taken and must not be deleted or replaced. Your result is saved. Use the different fork name shown below."
+      : "Your result is saved. Confirm the GitHub account and repository name below before creating a fork.";
+    // A generic GitHub /fork URL displays GitHub's default name.
+    // Never automatically navigate there after detecting a name collision.
+    showForkFeedback("Confirm the new fork name",message,copied?"success":"error");
+    $("fork-create-guide").hidden=false;
+    $("fork-account").textContent=login;
     $("required-fork-name").textContent=name;
+    $("fork-create-instructions").textContent=different
+      ? "GitHub will show "+TARGET_REPO+" by default. Replace that name with "+name+" before clicking Create fork. Verify that Owner matches your GitHub username."
+      : "On GitHub, verify Owner and enter "+name+" in Repository name before clicking Create fork.";
   }
 
   async function copyJson(){
@@ -705,7 +710,13 @@
     let json,forkName;
     try{json=buildSubmission();forkName=chosenForkName();}
     catch(error){showForkFeedback("Check submission details",error.message,"error");return;}
-    saveDraft();
+    if(!saveDraft()){
+      $("generated-json").textContent=json;
+      document.querySelector(".raw-preview").open=true;
+      showForkFeedback("Save your result before continuing",
+        "Browser storage is unavailable. Download the prepared JSON backup before leaving this page. GitHub submission is paused to prevent losing your result.","error");
+      return;
+    }
     $("generated-json").textContent=json;
     const login=$("github-username").value.trim().replace(/^@/,"");
     // Begin clipboard and tab opening within the original user click.
@@ -770,7 +781,7 @@
     $("submission-progress").dataset.stage="idle";
     if(destination.kind==="create"){
       if(!copied)document.querySelector(".raw-preview").open=true;
-      if(tab)tab.location.replace(forkUrl);
+      try{tab?.close();}catch(error){}
       showCreationGuide(login,destination,copied);
       return;
     }
@@ -808,6 +819,28 @@
   $("fork-repository").addEventListener("input",saveDraft);
   $("copy-json").addEventListener("click",copyJson);
   $("download-json").addEventListener("click",downloadJson);
+  $("open-fork-page").addEventListener("click",async()=>{
+    if($("fork-create-guide").hidden)return;
+    const name=$("required-fork-name").textContent;
+    // Reserve the browser tab synchronously to avoid popup blockers.
+    const tab=window.open("about:blank","_blank");
+    if(tab)tab.opener=null;
+    const copied=await copyToClipboard(name);
+    if(!copied){
+      try{tab?.close();}catch(error){}
+      showForkFeedback("Copy the fork name manually",
+        "Copy the exact repository name shown below before opening GitHub. The original result remains saved here.",
+        "error",forkUrl,"Open GitHub after copying the name");
+      $("fork-create-guide").hidden=false;
+      return;
+    }
+    if(tab)tab.location.replace(forkUrl);
+    showForkFeedback("Fork name copied",
+      "GitHub opens with its default name. In Repository name, replace it with "+name+
+      ". Once the fork is created, return here and click Submit result again.",
+      "success",tab?null:forkUrl,"Open GitHub fork page");
+    $("fork-create-guide").hidden=false;
+  });
   $("copy-fork-name").addEventListener("click",async()=>{
     const copied=await copyToClipboard($("required-fork-name").textContent);
     if(!copied)showForkFeedback("Copy fork name manually","Select the exact name shown above and copy it into GitHub.","error",forkUrl,"Open GitHub fork page");
