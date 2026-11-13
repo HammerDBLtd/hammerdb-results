@@ -332,7 +332,7 @@
     try { json = buildSubmission(); } catch (error) {
       status("Check submission details", error.message, "error"); return;
     }
-    const endpoint = String(window.HammerDBSubmissionAPI?.endpoint || "").replace(/\\/+$/, "");
+    const endpoint = String(window.HammerDBSubmissionAPI?.endpoint || "").replace(/[/]+$/, "");
     if (!endpoint) {
       status("Submission service not configured",
         "Automatic PR creation is not available on this test deployment yet. No data has been submitted.", "error");
