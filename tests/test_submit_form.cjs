@@ -201,11 +201,14 @@ test("popup blocked means visible editor fallback link",async()=>{
   assert.match(p.$("submit-next-detail").textContent,/blocked/);
 });
 
-test("the development page offers direct maintainer testing without changing fork logic",async()=>{
+test("development copy opens its maintainer editor without confusing the TPC-Council fork",async()=>{
   const p=await mount({repoOwner:"HammerDBLtd",login:"sm-shaw",mode:"wrong-parent"});
   assert.equal(p.$("dev-direct-editor").hidden,false);
-  assert.equal(p.$("direct-fork-link").href,"https://github.com/HammerDBLtd/hammerdb-results/fork");
   assert.match(p.$("dev-editor-link").href,/https:\/\/github\.com\/HammerDBLtd\/hammerdb-results\/new\/main\?filename=results%2F/);
+  await p.click("continue-github");
+  assert.match(p.tabs[0].navigated,/^https:\/\/github\.com\/HammerDBLtd\/hammerdb-results\/new\/main\?filename=results%2F/);
+  assert.match(p.$("submit-next-detail").textContent,/development leaderboard/);
+  assert.equal(p.requests.some(x=>x.startsWith("https://api.github.com/")),false);
 });
 
 test("the source does not use the failing inline fork flow for the main button",()=>{
