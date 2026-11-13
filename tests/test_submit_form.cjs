@@ -118,6 +118,14 @@ async function mount({repoOwner="HammerDBLtd",login="ls250",mode="existing",
       };
       return {status:200,ok:true,text:async()=>JSON.stringify(file)};
     }
+    if(url.startsWith("https://api.github.com/users/")){
+      if(mode==="user-list-403")return {status:403,ok:false};
+      const names=mode==="collision-alt-ready" ?
+        ["hammerdb-results-hammerdbltd"] :
+        mode==="existing-alt-custom" ? ["my-custom-benchmarks"] :
+        mode==="bulk-forks" ? [...Array.from({length:60},(_,i)=>"other-repo-"+i),"hammerdb-results-hammerdbltd"] : [];
+      return {status:200,ok:true,json:async()=>names.map(name=>({name,fork:true}))};
+    }
     if(url.startsWith("https://api.github.com/repos/") && url.includes("/pulls?")){
       const data=openPr?[{
         number:37,
@@ -134,7 +142,7 @@ async function mount({repoOwner="HammerDBLtd",login="ls250",mode="existing",
       if(mode==="unauthorized")return {status:403,ok:false};
       if(mode==="custom" && url.endsWith("/hammerdb-results"))return {status:404,ok:false};
       const isDefault=url.endsWith("/hammerdb-results");
-      const parent=(mode==="wrong-parent" || mode==="collision-alt-ready" || mode==="collision-alt-conflict") && isDefault
+      const parent=(["wrong-parent","collision-alt-ready","collision-alt-conflict","existing-alt-custom","user-list-403","bulk-forks"].includes(mode)) && isDefault
         ? "TPC-Council/hammerdb-results"
         : mode==="wrong-parent"&&url.includes("/hammerdb-results-hammerdbltd")
         ? null
@@ -196,9 +204,9 @@ test("Lucas's existing TPC-Council fork opens directly on the TPC-Council site",
   const p=await mount({repoOwner:"TPC-Council",login:"ls250",mode:"existing"});
   await p.click("continue-github");
   assert.match(p.tabs[0].navigated,/^https:\/\/github\.com\/ls250\/hammerdb-results\/new\/main\?filename=results%2F/);
-  assert.equal(p.$("fork-feedback").hidden,false);
+  assert.equal(p.$("fork-feedback").hidden,true);
   assert.equal(p.$("fork-create-guide").hidden,true);
-  assert.equal(p.$("fork-feedback-link").href,p.tabs[0].navigated);
+  assert.equal(p.$("submission-progress").dataset.stage,"editing");
   assert.equal(p.requests.some(url=>url.includes("TPC-Council/hammerdb-results/fork")),false);
 });
 
@@ -206,12 +214,13 @@ test("a first-time contributor gets a clear fork name BEFORE navigating to GitHu
   const p=await mount({login:"newperson",mode:"no-fork"});
   await p.click("continue-github");
   assert.equal(p.tabs.length,1);
-  assert.equal(p.tabs[0].closed,true);
-  assert.equal(p.tabs[0].navigated,null);
-  assert.equal(p.$("fork-create-guide").hidden,false);
+  assert.equal(p.tabs[0].closed,false);
+  assert.equal(p.tabs[0].navigated,"https://github.com/HammerDBLtd/hammerdb-results/fork");
+  assert.equal(p.$("fork-create-guide").hidden,true);
   assert.equal(p.$("required-fork-name").textContent,"hammerdb-results");
   assert.equal(p.$("fork-feedback-link").href,"https://github.com/HammerDBLtd/hammerdb-results/fork");
-  assert.match(p.$("fork-feedback-message").textContent,/Use the name shown below/);
+  assert.match(p.$("fork-feedback-message").textContent,/Create your fork on GitHub/);
+  assert.ok(p.requests.some(url=>url.startsWith("https://api.github.com/users/newperson/repos?")));
   assert.equal(p.copied.length,1);
   assert.ok(p.backingStorage.has("hammerdb-results-submission-draft:hammerdbltd/hammerdb-results"));
 });
@@ -219,12 +228,12 @@ test("a first-time contributor gets a clear fork name BEFORE navigating to GitHu
 test("Lucas's existing TPC fork is preserved; new available HammerDB Ltd name is shown",async()=>{
   const p=await mount({login:"ls250",mode:"wrong-parent"});
   await p.click("continue-github");
-  assert.equal(p.tabs[0].closed,true);
-  assert.equal(p.tabs[0].navigated,null);
+  assert.equal(p.tabs[0].closed,false);
+  assert.equal(p.tabs[0].navigated,"https://github.com/HammerDBLtd/hammerdb-results/fork");
   assert.equal(p.$("fork-repository").value,"hammerdb-results-hammerdbltd");
   assert.equal(p.$("required-fork-name").textContent,"hammerdb-results-hammerdbltd");
-  assert.match(p.$("fork-feedback-message").textContent,/other fork is safe/);
-  assert.equal(p.$("fork-options").open,true);
+  assert.match(p.$("fork-feedback-message").textContent,/existing fork belongs to another repository/);
+  assert.equal(p.$("fork-create-guide").hidden,false);
   assert.equal(p.$("fork-feedback-link").href,"https://github.com/HammerDBLtd/hammerdb-results/fork");
   await p.click("copy-fork-name");
   assert.equal(p.copied.at(-1),"hammerdb-results-hammerdbltd");
@@ -237,8 +246,9 @@ test("if Lucas already created a correctly parented alternate fork, reuse it dir
   assert.equal(p.$("fork-repository").value,"hammerdb-results-hammerdbltd");
   assert.match(p.tabs[0].navigated,/^https:\/\/github\.com\/ls250\/hammerdb-results-hammerdbltd\/new\/main\?filename=results%2F/);
   assert.equal(p.$("fork-create-guide").hidden,true);
-  assert.match(p.$("fork-feedback-title").textContent,/Save your JSON in GitHub/);
+  assert.equal(p.$("fork-feedback").hidden,true);
   assert.equal(p.$("submission-progress").dataset.stage,"editing");
+  assert.ok(p.requests.some(url=>url.startsWith("https://api.github.com/users/ls250/repos?")));
 });
 
 test("when the suggested name is also taken, find the next unused name",async()=>{
@@ -246,11 +256,12 @@ test("when the suggested name is also taken, find the next unused name",async()=
   await p.click("continue-github");
   assert.equal(p.$("fork-repository").value,"hammerdb-results-hammerdbltd-2");
   assert.equal(p.$("required-fork-name").textContent,"hammerdb-results-hammerdbltd-2");
-  assert.equal(p.tabs[0].closed,true);
+  assert.equal(p.tabs[0].closed,false);
+  assert.equal(p.tabs[0].navigated,"https://github.com/HammerDBLtd/hammerdb-results/fork");
 });
 
 test("a separately named fork can be used after it has been created",async()=>{
-  const p=await mount({login:"ls250",mode:"existing",forkName:"hammerdb-results-hammerdbltd"});
+  const p=await mount({login:"ls250",mode:"collision-alt-ready"});
   await p.click("continue-github");
   assert.match(p.tabs[0].navigated,/^https:\/\/github\.com\/ls250\/hammerdb-results-hammerdbltd\/new\/main\?filename=results%2F/);
 });
@@ -288,7 +299,8 @@ test("missing username reports error without opening GitHub",async()=>{
 });
 
 test("invalid fork repository name is caught before navigation",async()=>{
-  const p=await mount({forkName:"other/name"});
+  const p=await mount();
+  p.$("fork-repository").value="other/name";
   await p.click("continue-github");
   assert.equal(p.tabs.length,0);
   assert.match(p.$("fork-feedback-message").textContent,/fork repository name/);
@@ -316,7 +328,7 @@ test("when popup is blocked an existing fork has a working fallback link",async(
   await p.click("continue-github");
   assert.equal(p.tabs.length,0);
   assert.match(p.$("fork-feedback-link").href,/^https:\/\/github\.com\/ls250\/hammerdb-results\/new\/main\?filename=results%2F/);
-  assert.match(p.$("fork-feedback-message").textContent,/blocked the new tab/);
+  assert.match(p.$("fork-feedback-message").textContent,/Open your fork editor using this link/);
 });
 
 test("edits to the form are restored after returning from GitHub",async()=>{
@@ -381,18 +393,20 @@ test("prepared submission JSON preserves benchmark evidence and submits correct 
 test("the controller cannot open GitHub's failing new-file editor in the original repository",()=>{
   assert.match(script,/resolveFork\(login,forkName\)/);
   assert.doesNotMatch(script,/const url = "https:\/\/github\.com\/" \+ TARGET_OWNER \+ "\/" \+ TARGET_REPO \+ "\/new\/"/);
-  assert.ok(html.includes("Finish submission — Open PR"));
+  assert.ok(html.includes('id="continue-github">Submit result'));
+  assert.ok(html.includes("GitHub issue:"));
+  assert.ok(!html.includes('id="fork-options"'));
   assert.ok(!html.includes("direct-fork-link"));
 });
 
 test("Lucas's already committed result opens the prefilled PR, not another editor",async()=>{
   const p=await mount({
-    login:"ls250",mode:"existing",forkName:"hammerdb-results-hammerdbltd",
+    login:"ls250",mode:"collision-alt-ready",
     initiallyCommitted:true
   });
   await p.click("continue-github");
   assert.equal(p.tabs.length,1);
-  assert.match(p.tabs[0].navigated,/^https:\/\/github\.com\/HammerDBLtd\/hammerdb-results\/compare\/main\.\.\.ls250:main\?quick_pull=1&title=/);
+  assert.match(p.tabs[0].navigated,/^https:\/\/github\.com\/HammerDBLtd\/hammerdb-results\/compare\/main\.\.\.ls250:hammerdb-results-hammerdbltd:main\?quick_pull=1&title=/);
   const u=new URL(p.tabs[0].navigated);
   assert.equal(u.searchParams.get("quick_pull"),"1");
   assert.match(u.searchParams.get("title"),/FAKEABC123/);
@@ -422,7 +436,7 @@ test("clicking Finish before saving never opens an empty PR",async()=>{
   assert.equal(p.tabs[1].closed,true);
   assert.equal(p.tabs[1].navigated,null);
   assert.equal(p.$("submission-progress").dataset.stage,"editing");
-  assert.match(p.$("submission-progress-title").textContent,/Save the result/);
+  assert.match(p.$("submission-progress-title").textContent,/Finish your GitHub submission/);
 });
 
 test("after the GitHub commit one click finishes submission by opening the PR",async()=>{
@@ -430,7 +444,7 @@ test("after the GitHub commit one click finishes submission by opening the PR",a
   await p.click("continue-github");
   p.commit();
   await p.click("finish-pr");
-  assert.match(p.tabs[1].navigated,/\/compare\/main\.\.\.ls250:main\?quick_pull=1/);
+  assert.match(p.tabs[1].navigated,/\/compare\/main\.\.\.ls250:hammerdb-results:main\?quick_pull=1/);
   assert.equal(p.$("submission-progress").dataset.stage,"ready");
   assert.equal(p.$("pr-link").href,p.tabs[1].navigated);
 });
@@ -481,21 +495,21 @@ test("submission is resumable with a PR step after reloading the page",async()=>
   await q.focus();
   assert.equal(q.$("fork-repository").value,"hammerdb-results");
   assert.equal(q.$("submission-progress").dataset.stage,"editing");
-  assert.match(q.$("submission-progress-detail").textContent,/Finish submission/);
+  assert.match(q.$("submission-progress-detail").textContent,/Open pull request/);
 });
 
 test("the production target constructs a TPC-Council PR (not HammerDB Ltd)",async()=>{
   const p=await mount({repoOwner:"TPC-Council",login:"ls250",initiallyCommitted:true});
   await p.click("continue-github");
   const url=p.tabs[0].navigated;
-  assert.match(url,/^https:\/\/github\.com\/TPC-Council\/hammerdb-results\/compare\/main\.\.\.ls250:main\?quick_pull=1/);
+  assert.match(url,/^https:\/\/github\.com\/TPC-Council\/hammerdb-results\/compare\/main\.\.\.ls250:hammerdb-results:main\?quick_pull=1/);
   assert.doesNotMatch(url,/HammerDBLtd/);
 });
 
 test("the fork's master branch is preserved in the PR comparison",async()=>{
   const p=await mount({login:"raj-rahul51",defaultBranch:"master",initiallyCommitted:true});
   await p.click("continue-github");
-  assert.match(p.tabs[0].navigated,/\/compare\/main\.\.\.raj-rahul51:master\?quick_pull=1/);
+  assert.match(p.tabs[0].navigated,/\/compare\/main\.\.\.raj-rahul51:hammerdb-results:master\?quick_pull=1/);
 });
 
 test("the PR description is concise and never embeds the full benchmark JSON",async()=>{
@@ -514,4 +528,70 @@ test("automation can rely on the stable stage and PR link IDs",()=>{
   assert.ok(html.includes('id="finish-pr"'));
   assert.ok(html.includes('id="pr-link"'));
   assert.match(script,/quick_pull:"1"/);
+});
+
+
+test("a user with a differently named fork never sees Create fork",async()=>{
+  const p=await mount({login:"ls250",mode:"existing-alt-custom"});
+  await p.click("continue-github");
+  assert.equal(p.$("fork-repository").value,"my-custom-benchmarks");
+  assert.match(p.tabs[0].navigated,
+    /^https:\/\/github\.com\/ls250\/my-custom-benchmarks\/new\/main\?filename=results%2F/);
+  assert.equal(p.tabs[0].closed,false);
+  assert.ok(p.requests.some(url=>url.startsWith("https://api.github.com/users/ls250/repos?")));
+  assert.doesNotMatch(p.tabs[0].navigated,/\/fork$/);
+});
+
+test("already committed result in renamed fork opens PR without an editor or extra fork",async()=>{
+  const p=await mount({login:"ls250",mode:"collision-alt-ready",initiallyCommitted:true});
+  await p.click("continue-github");
+  assert.match(p.tabs[0].navigated,
+    /\/HammerDBLtd\/hammerdb-results\/compare\/main\.\.\.ls250:hammerdb-results-hammerdbltd:main\?quick_pull=1/);
+  assert.doesNotMatch(p.tabs[0].navigated,/\/new\/|\/fork$/);
+  assert.equal(p.$("submission-progress").dataset.stage,"ready");
+});
+
+test("no second fork is suggested if GitHub cannot verify the user's existing forks",async()=>{
+  const p=await mount({login:"ls250",mode:"user-list-403"});
+  await p.click("continue-github");
+  assert.equal(p.tabs[0].closed,true);
+  assert.equal(p.tabs[0].navigated,null);
+  assert.match(p.$("fork-feedback-title").textContent,/Could not check/);
+  assert.ok(p.requests.some(url=>url.startsWith("https://api.github.com/users/ls250/repos?")));
+});
+
+test("normal form exposes one primary Submit button and hides technical backup tools",()=>{
+  const submission=html.slice(html.indexOf('id="submit-section"'),html.indexOf('</section>',html.indexOf('id="submit-section"')));
+  assert.match(submission,/id="continue-github">Submit result/);
+  assert.match(submission,/<details class="raw-preview"><summary>Result backup and troubleshooting/);
+  assert.ok(!submission.includes('id="fork-options"'));
+  assert.ok(!submission.includes("GitHub fork repository name"));
+  assert.ok(!submission.includes("Copy enriched JSON</button>"));
+});
+
+test("Github GitHub 422 warning and direct fork recovery are included",()=>{
+  assert.ok(html.includes("HTTP 422"));
+  assert.ok(script.includes('const forkUrl = "https://github.com/" + upstreamRepository + "/fork"'));
+  assert.match(script,/discoverExistingFork\(login,preferredName\)/);
+});
+
+
+test("changing the submitter never reuses a previous account's fork",async()=>{
+  const p=await mount({login:"ls250",mode:"collision-alt-ready"});
+  await p.click("continue-github");
+  assert.equal(p.$("fork-repository").value,"hammerdb-results-hammerdbltd");
+  p.$("github-username").value="different-user";
+  await p.input("github-username");
+  assert.equal(p.$("fork-repository").value,"hammerdb-results");
+  assert.equal(p.$("submission-progress").hidden,true);
+  assert.equal(p.$("submission-progress").dataset.stage,"idle");
+});
+
+test("when a user has many forks a matching HammerDB fork is still reused",async()=>{
+  const p=await mount({login:"ls250",mode:"bulk-forks"});
+  await p.click("continue-github");
+  assert.equal(p.$("fork-repository").value,"hammerdb-results-hammerdbltd");
+  assert.match(p.tabs[0].navigated,
+    /^https:\/\/github\.com\/ls250\/hammerdb-results-hammerdbltd\/new\/main\?filename=results%2F/);
+  assert.doesNotMatch(p.tabs[0].navigated,/\/fork$/);
 });
