@@ -55,9 +55,6 @@
     .submit-actions button{border:0;cursor:pointer}
     .submit-actions button:disabled{opacity:.4;cursor:not-allowed}
     .submit-actions .copy-button{padding:12px 17px;border:1px solid var(--border);border-radius:11px;background:var(--surface-raised);color:var(--text);font-weight:850}
-    .submit-next{margin-top:12px;padding:13px 15px;border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:10px;background:var(--surface-soft);font-size:13px;line-height:1.55}
-    .submit-next[hidden]{display:none!important}.submit-next.error{border-left-color:#eb6d7f}.submit-next.success{border-left-color:#44cdaa}
-    .submit-next strong{display:block;font-size:14px}.submit-next p{margin:5px 0 7px;color:var(--muted)}.submit-next a{color:var(--accent);font-weight:800}
     .help-panel{position:sticky;top:100px}
     .help-panel h3{font-size:18px;margin-bottom:10px}
     .help-panel ol{padding-left:19px;color:var(--muted);font-size:13px}
@@ -104,11 +101,8 @@
         <div id="workload-help" class="declare-note">Older results lacking UAW and durability data remain unclassified. IOPS / MB/s by themselves do not prove a bottleneck.</div>
       </section>
       <section class="submit-panel" id="submit-section" hidden><div class="panel-title"><span class="step-index">4</span><div><h2>Review and submit through GitHub</h2><p>Your artifact will contain the benchmark evidence plus your additional submission information.</p></div></div>
-        <div class="submit-actions"><button type="button" class="copy-button" id="copy-json">Copy JSON</button><button type="button" class="action action-primary" id="continue-github">Submit result via GitHub ↗</button></div>
-        <div id="submit-next" class="submit-next" role="status" aria-live="polite" hidden><strong id="submit-next-title"></strong><p id="submit-next-detail"></p><a id="submit-next-link" href="#" target="_blank" rel="noopener noreferrer" hidden>Continue on GitHub</a></div>
-        <p class="field-note">We'll open your existing fork for editing, or help you create one. Paste the JSON, commit it and open a pull request. After approval, your result appears on the leaderboard.</p>
-        <p class="field-note">First submission? <a id="direct-fork-link" href="#" target="_blank" rel="noopener noreferrer">Create your fork directly on GitHub</a>.</p>
-        <p class="field-note" id="dev-direct-editor" hidden>For development testing with write access: <a id="dev-editor-link" href="#" target="_blank" rel="noopener noreferrer">Open HammerDB Ltd's file editor directly</a>.</p>
+        <div class="submit-actions"><button type="button" class="copy-button" id="copy-json">Copy enriched JSON</button><button type="button" class="action action-primary" id="continue-github">Continue to GitHub ↗</button></div>
+        <p class="field-note">On GitHub paste the copied JSON into the new file, commit, and open a pull request. The contributor's GitHub login is checked against the value you entered.</p>
         <div class="safeguard">These are community-submitted, unaudited results. A workload badge describes declared configuration, not a measured finding of CPU or storage saturation.</div>
         <details class="raw-preview"><summary>Inspect the generated JSON</summary><pre id="generated-json">Select an artifact to preview.</pre></details>
       </section>
@@ -248,9 +242,8 @@
     artifact = parsed; resultPath = path;
     renderPreview(parsed);
     $("result-path").textContent = path;
-    if(TARGET_OWNER === "HammerDBLtd") $("dev-editor-link").href = editorUrl(TARGET_OWNER,TARGET_BRANCH);
     prefillConfig(parsed);
-    status("Checking for duplicates", "Checking whether this result is already published in " + TARGET_OWNER + "/" + TARGET_REPO + "…");
+    status("Checking for duplicates", "Checking whether this result is already in HammerDB Ltd…");
     try {
       const exists = await existsInRepo(path);
       if (id !== validationId) return;
@@ -320,144 +313,45 @@
     try { $("generated-json").textContent = buildSubmission(); }
     catch (error) { $("generated-json").textContent = "Complete the required fields to preview enriched JSON.\n" + error.message; }
   }
-  const repositoryUrl = "https://github.com/" + TARGET_OWNER + "/" + TARGET_REPO;
-  const forkUrl = repositoryUrl + "/fork";
-  $("direct-fork-link").href = forkUrl;
-  if(TARGET_OWNER === "HammerDBLtd") $("dev-direct-editor").hidden = false;
-  function editorUrl(owner,branch){
-    return "https://github.com/" + encodeURIComponent(owner) + "/" + TARGET_REPO +
-      "/new/" + encodeURIComponent(branch) + "?filename=" + encodeURIComponent(resultPath);
-  }
-  function feedback(title,message,kind,url,label){
-    $("submit-next").hidden = false;
-    $("submit-next").className = "submit-next" + (kind ? " " + kind : "");
-    $("submit-next-title").textContent = title;
-    $("submit-next-detail").textContent = message;
-    $("submit-next-link").hidden = !url;
-    if(url){
-      $("submit-next-link").href = url;
-      $("submit-next-link").textContent = label || "Continue on GitHub";
-    }
-    $("submit-next").scrollIntoView?.({block:"nearest"});
-  }
-  async function copyPrepared(json){
-    try{
-      if(navigator.clipboard?.writeText){
-        await navigator.clipboard.writeText(json);
-        return true;
-      }
-    }catch(e){}
-    const area=document.createElement("textarea");
-    area.value=json;
-    area.setAttribute("readonly","");
-    area.style.position="fixed";
-    area.style.top="-9999px";
-    document.body.appendChild(area);
-    area.focus();area.select();
-    let copied=false;
-    try{copied=typeof document.execCommand==="function"&&document.execCommand("copy");}
-    finally{area.remove();}
-    return copied;
-  }
-  async function forkDestination(login){
-    // Development Pages is a maintainer test copy, not the upstream fork network.
-    if(TARGET_OWNER==="HammerDBLtd")return {kind:"development",url:editorUrl(TARGET_OWNER,TARGET_BRANCH)};
-    if(login.toLowerCase()===TARGET_OWNER.toLowerCase())
-      return {kind:"editor",url:editorUrl(TARGET_OWNER,TARGET_BRANCH)};
-    let response;
-    try{
-      response=await fetch("https://api.github.com/repos/"+encodeURIComponent(login)+"/"+TARGET_REPO,{
-        headers:{"Accept":"application/vnd.github+json"},cache:"no-store"
-      });
-    }catch(e){return {kind:"unavailable"};}
-    if(response.status===404)return {kind:"fork",url:forkUrl};
-    if(!response.ok)return {kind:"unavailable"};
-    let info;
-    try{info=await response.json();}catch(e){return {kind:"unavailable"};}
-    const expected=(TARGET_OWNER+"/"+TARGET_REPO).toLowerCase();
-    const correct=info.fork===true && [info.parent?.full_name,info.source?.full_name]
-      .some(x=>String(x||"").toLowerCase()===expected);
-    if(!correct)return {kind:"other"};
-    const defaultBranch=typeof info.default_branch==="string"&&
-      /^[a-z0-9][a-z0-9._/-]{0,127}$/i.test(info.default_branch)
-      ? info.default_branch : TARGET_BRANCH;
-    return {kind:"editor",url:editorUrl(login,defaultBranch)};
-  }
-  async function copyJson(){
+  async function copyJson() {
     let json;
-    try{json=buildSubmission();}
-    catch(e){feedback("Check your submission",e.message,"error");return false;}
-    $("generated-json").textContent=json;
-    const copied=await copyPrepared(json);
-    if(copied)feedback("JSON copied","Use the GitHub button when you're ready.","success");
-    else{
-      document.querySelector(".raw-preview").open=true;
-      feedback("Copy manually","Automatic copy is unavailable. Expand the JSON below and copy it manually.","error");
+    try { json = buildSubmission(); } catch (error) { status("Check submission details", error.message, "error"); return false; }
+    $("generated-json").textContent = json;
+    try {
+      await navigator.clipboard.writeText(json);
+      status("JSON copied", "Continue to GitHub, paste the enriched JSON into the new-file editor, commit and open your PR.", "success");
+      return true;
+    } catch (error) {
+      document.querySelector(".raw-preview").open = true;
+      status("Clipboard unavailable", "Copy the enriched JSON manually from the preview, then continue to GitHub.", "error");
+      return false;
     }
-    return copied;
   }
-  async function continueOnGitHub(){
-    let json;
-    try{json=buildSubmission();}
-    catch(e){feedback("Check your submission",e.message,"error");return;}
-    $("generated-json").textContent=json;
-    const login=$("github-username").value.trim().replace(/^@/,"");
-    // Clipboard and popup both start during the user click.
-    const copyPromise=copyPrepared(json);
-    const tab=window.open("about:blank","_blank");
-    if(tab)tab.opener=null;
-    const [copied,destination]=await Promise.all([copyPromise,forkDestination(login)]);
-    if(!copied){
-      try{tab?.close();}catch(e){}
-      document.querySelector(".raw-preview").open=true;
-      const direct=["editor","fork","development"].includes(destination.kind);
-      const link=direct?destination.url:forkUrl;
-      feedback("Copy manually","Copy the JSON below, then use the GitHub link to continue.","error",
-        link,destination.kind==="editor"?"Open your fork editor":destination.kind==="development"?"Open development editor":"Create your fork directly");
-      return;
-    }
-    if(destination.kind==="other"){
-      try{tab?.close();}catch(e){}
-      feedback("Different repository found","Your account already has "+TARGET_REPO+
-        ", but it is not a fork of "+TARGET_OWNER+"/"+TARGET_REPO+
-        ". Use a matching fork or ask a maintainer for help.","error");
-      return;
-    }
-    if(destination.kind==="unavailable"){
-      try{tab?.close();}catch(e){}
-      feedback("Unable to check your fork","JSON copied. GitHub could not verify your fork. If you already have one, open its repository below. Otherwise use the direct fork link.","error",
-        "https://github.com/" + encodeURIComponent(login) + "/" + TARGET_REPO,"Open your existing repository");
-      return;
-    }
-    if(tab)tab.location.replace(destination.url);
-    if(destination.kind==="fork"){
-      feedback("Create your fork on GitHub","Finish creating your fork in the new tab. Return here and click Submit result via GitHub again. Your JSON stays on this page.","success",
-        destination.url,"Open GitHub fork setup");
-    }else if(destination.kind==="development"){
-      feedback("Development editor is open",
-        "JSON copied. Paste it into the HammerDB Ltd editor, commit to a new branch and open a PR to HammerDB Ltd. This requires write access. After approval, your result appears on the development leaderboard.",
-        "success",destination.url,"Open development editor");
-    }else{
-      feedback("Your GitHub editor is open","JSON copied. Paste it into your fork, commit to a branch and open a pull request to "+
-        TARGET_OWNER+"/"+TARGET_REPO+". The result appears on the leaderboard after approval.","success",
-        destination.url,"Open your fork editor");
-    }
-    if(!tab)$("submit-next-detail").textContent+=" Your browser blocked the new tab; use the link below.";
-  }
+
   $("choose-file").addEventListener("click", () => $("artifact-file").click());
   $("artifact-file").addEventListener("change", async () => {
-    const file = $("artifact-file").files[0]; if(file)await loadArtifact(await file.text());
+    const file = $("artifact-file").files[0]; if (file) await loadArtifact(await file.text());
   });
-  const zone=$("drop-zone");
-  zone.addEventListener("dragover",(event)=>{event.preventDefault();zone.classList.add("dragging");});
-  zone.addEventListener("dragleave",()=>zone.classList.remove("dragging"));
-  zone.addEventListener("drop",async (event)=>{
-    event.preventDefault();zone.classList.remove("dragging");
-    if(event.dataTransfer.files[0])await loadArtifact(await event.dataTransfer.files[0].text());
+  const zone = $("drop-zone");
+  zone.addEventListener("dragover", (event) => { event.preventDefault(); zone.classList.add("dragging"); });
+  zone.addEventListener("dragleave", () => zone.classList.remove("dragging"));
+  zone.addEventListener("drop", async (event) => {
+    event.preventDefault(); zone.classList.remove("dragging");
+    if (event.dataTransfer.files[0]) await loadArtifact(await event.dataTransfer.files[0].text());
   });
-  fields.forEach(id=>$(id).addEventListener("input",updateGeneratedPreview));
-  $("copy-json").addEventListener("click",copyJson);
-  $("continue-github").addEventListener("click",continueOnGitHub);
+  fields.forEach((id) => $(id).addEventListener("input", updateGeneratedPreview));
+  $("copy-json").addEventListener("click", copyJson);
+  $("continue-github").addEventListener("click", async () => {
+    let json;
+    try { json = buildSubmission(); } catch (error) { status("Check submission details", error.message, "error"); return; }
+    $("generated-json").textContent = json;
+    try { await navigator.clipboard.writeText(json); }
+    catch (error) { document.querySelector(".raw-preview").open = true; }
+    const url = "https://github.com/" + TARGET_OWNER + "/" + TARGET_REPO + "/new/" +
+      TARGET_BRANCH + "?filename=" + encodeURIComponent(resultPath);
+    window.open(url, "_blank", "noopener");
+    status("Continue on GitHub", "Paste the generated JSON into the editor and open a pull request using the GitHub account you declared.", "success");
+  });
   const artifactUrl = new URLSearchParams(location.search).get("artifact_url");
   if (artifactUrl) {
     status("Loading saved artifact", "Retrieving the supplied benchmark JSON URL…");
