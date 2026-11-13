@@ -497,7 +497,10 @@
       const bMatch=/hammerdb|benchmark/i.test(b)?1:0;
       return bMatch-aMatch;
     });
-    if(matches.length>25)return {kind:"unknown"}; // Avoid GitHub API rate exhaustion.
+    // Name matches first. A fork may be renamed, so do not assume that a
+    // nonstandard fork name means no matching fork exists.
+    // Avoid creating another fork if verification is rate-limited.
+    if(matches.length>55)return {kind:"unknown"};
     for(const name of matches){
       const found=await lookupFork(login,name);
       if(found.kind==="ready")return found;
@@ -538,7 +541,7 @@
       "Please review this community-submitted, unaudited result.";
     return "https://github.com/"+upstreamRepository+"/compare/"+
       TARGET_BRANCH+"..."+encodeURIComponent(ctx.login)+":"+
-      encodeURIComponent(ctx.branch)+"?"+new URLSearchParams({
+      encodeURIComponent(ctx.repo)+":"+encodeURIComponent(ctx.branch)+"?"+new URLSearchParams({
         quick_pull:"1",title,body
       }).toString();
   }
@@ -651,8 +654,8 @@
     saveDraft();
     const different=Boolean(destination.collision);
     const message=different
-      ? "Your existing fork is safe. For this development test, GitHub needs a different name. Use the name shown below, create the fork, then return and press Submit result again."
-      : "GitHub has opened its fork page. Create your fork once, then return and press Submit result again.";
+      ? "Your existing fork belongs to another repository. Create a fork with the name below, then return and click Submit result again."
+      : "Create your fork on GitHub, then return and click Submit result again.";
     showForkFeedback("Create your GitHub fork",message,
       copied?"success":"error",forkUrl,"Open GitHub fork page");
     $("fork-create-guide").hidden=!different;
