@@ -171,7 +171,7 @@ test("GitHub API failure shows recovery links, never inline upstream editor",asy
   const p=await mount({mode:"unavailable"});
   await p.click("continue-github");
   assert.equal(p.tabs[0].closed,true);
-  assert.match(p.$("submit-next-detail").textContent,/could not confirm|unable to check|already have a fork/i);
+  assert.match(p.$("submit-next-detail").textContent,/could not verify|unable to check|already have one/i);
   assert.equal(p.$("submit-next-link").href,"https://github.com/rpbbox/hammerdb-results");
 });
 
