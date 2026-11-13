@@ -169,8 +169,13 @@ async function mount({repoOwner="HammerDBLtd",login="ls250",mode="existing",
     URL,URLSearchParams,encodeURIComponent,console,Blob,setTimeout
   },{filename:"site/submit.html"});
   for(let i=0;i<4;i++)await new Promise(setImmediate);
-  assert.equal($("submit-section").hidden,false,"Test artifact should validate");
-  if(preloadArtifact)$("github-username").value=login;
+  if(preloadArtifact){
+    assert.equal($("submit-section").hidden,false,"Test artifact should validate");
+    $("github-username").value=login;
+  }else{
+    assert.equal($("submit-section").hidden,true,"A reload without artifact_url must start blank");
+    assert.equal($("preview").hidden,true,"The prior result preview must not return automatically");
+  }
   async function click(id){
     const callbacks=$(id).events.get("click")||[];
     assert.ok(callbacks.length,"No click callback for "+id);
@@ -364,7 +369,7 @@ test("when popup is blocked an existing fork has a working fallback link",async(
   assert.match(p.$("fork-feedback-message").textContent,/Open your fork editor using this link/);
 });
 
-test("edits to the form are restored after returning from GitHub",async()=>{
+test("refresh clears uploaded JSON and details even when a draft exists",async()=>{
   const first=await mount({login:"ls250"});
   first.$("company-name").value="Testing Systems Ltd";
   first.$("result-description").value="Testing return from fork setup";
@@ -374,12 +379,32 @@ test("edits to the form are restored after returning from GitHub",async()=>{
   await first.input("fork-repository");
   const snapshot=Object.fromEntries(first.backingStorage);
   const second=await mount({initialStorage:snapshot,preloadArtifact:false});
+  assert.equal(second.$("preview").hidden,true);
+  assert.equal(second.$("details-section").hidden,true);
+  assert.equal(second.$("submit-section").hidden,true);
+  assert.equal(second.$("github-username").value,"");
+  assert.equal(second.$("company-name").value,"");
+  assert.equal(second.$("result-description").value,"");
+  assert.equal(second.$("generated-json").textContent,"Select an artifact to preview.");
+  assert.equal(second.$("resume-draft-controls").hidden,false,"Recovery remains optional");
+  assert.equal(second.$("fork-repository").value,"hammerdb-results");
+  assert.equal(second.requests.some(url=>url.includes("raw.githubusercontent.com")),false,
+    "Refresh must not look up the stale result");
+  await second.click("resume-draft");
   assert.equal(second.$("github-username").value,"ls250");
   assert.equal(second.$("company-name").value,"Testing Systems Ltd");
   assert.equal(second.$("result-description").value,"Testing return from fork setup");
   assert.equal(second.$("fork-repository").value,"hammerdb-results-hammerdbltd");
   assert.match(second.$("generated-json").textContent,/Testing return from fork setup/);
   assert.match(second.$("status").querySelector("strong").textContent,/Submission restored/);
+});
+
+test("a new visit without a saved submission stays empty",async()=>{
+  const page=await mount({preloadArtifact:false});
+  assert.equal(page.$("preview").hidden,true);
+  assert.equal(page.$("submit-section").hidden,true);
+  assert.equal(page.$("resume-draft-controls").hidden,true);
+  assert.equal(page.$("generated-json").textContent,"Select an artifact to preview.");
 });
 
 test("changing fork repository name updates saved draft",async()=>{
@@ -520,11 +545,15 @@ test("a result with different GitHub attribution cannot start a PR",async()=>{
   assert.equal(p.$("submission-progress").dataset.stage,"error");
 });
 
-test("submission is resumable with a PR step after reloading the page",async()=>{
+test("a PR in progress can be resumed explicitly without auto-loading on refresh",async()=>{
   const p=await mount({login:"ls250"});
   await p.click("continue-github");
   const saved=Object.fromEntries(p.backingStorage);
   const q=await mount({login:"ls250",initialStorage:saved,preloadArtifact:false});
+  assert.equal(q.$("submit-section").hidden,true);
+  assert.equal(q.$("submission-progress").hidden,true);
+  assert.equal(q.$("resume-draft-controls").hidden,false);
+  await q.click("resume-draft");
   await q.focus();
   assert.equal(q.$("fork-repository").value,"hammerdb-results");
   assert.equal(q.$("submission-progress").dataset.stage,"editing");
