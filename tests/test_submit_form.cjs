@@ -214,12 +214,15 @@ test("a first-time contributor gets a clear fork name BEFORE navigating to GitHu
   const p=await mount({login:"newperson",mode:"no-fork"});
   await p.click("continue-github");
   assert.equal(p.tabs.length,1);
-  assert.equal(p.tabs[0].closed,false);
-  assert.equal(p.tabs[0].navigated,"https://github.com/HammerDBLtd/hammerdb-results/fork");
-  assert.equal(p.$("fork-create-guide").hidden,true);
+  assert.equal(p.tabs[0].closed,true);
+  assert.equal(p.tabs[0].navigated,null);
+  assert.equal(p.$("fork-create-guide").hidden,false);
   assert.equal(p.$("required-fork-name").textContent,"hammerdb-results");
-  assert.equal(p.$("fork-feedback-link").href,"https://github.com/HammerDBLtd/hammerdb-results/fork");
-  assert.match(p.$("fork-feedback-message").textContent,/Create your fork on GitHub/);
+  assert.equal(p.$("fork-account").textContent,"newperson");
+  assert.match(p.$("fork-feedback-message").textContent,/Confirm the GitHub account/);
+  await p.click("open-fork-page");
+  assert.equal(p.tabs[1].navigated,"https://github.com/HammerDBLtd/hammerdb-results/fork");
+  assert.equal(p.copied.at(-1),"hammerdb-results");
   assert.ok(p.requests.some(url=>url.startsWith("https://api.github.com/users/newperson/repos?")));
   assert.equal(p.copied.length,1);
   assert.ok(p.backingStorage.has("hammerdb-results-submission-draft:hammerdbltd/hammerdb-results"));
@@ -228,16 +231,43 @@ test("a first-time contributor gets a clear fork name BEFORE navigating to GitHu
 test("Lucas's existing TPC fork is preserved; new available HammerDB Ltd name is shown",async()=>{
   const p=await mount({login:"ls250",mode:"wrong-parent"});
   await p.click("continue-github");
-  assert.equal(p.tabs[0].closed,false);
-  assert.equal(p.tabs[0].navigated,"https://github.com/HammerDBLtd/hammerdb-results/fork");
+  assert.equal(p.tabs[0].closed,true);
+  assert.equal(p.tabs[0].navigated,null);
   assert.equal(p.$("fork-repository").value,"hammerdb-results-hammerdbltd");
   assert.equal(p.$("required-fork-name").textContent,"hammerdb-results-hammerdbltd");
-  assert.match(p.$("fork-feedback-message").textContent,/existing fork belongs to another repository/);
+  assert.match(p.$("fork-feedback-message").textContent,/must not be deleted or replaced/);
   assert.equal(p.$("fork-create-guide").hidden,false);
-  assert.equal(p.$("fork-feedback-link").href,"https://github.com/HammerDBLtd/hammerdb-results/fork");
+  assert.match(p.$("fork-create-instructions").textContent,/Replace that name with hammerdb-results-hammerdbltd/);
+  assert.equal(p.$("fork-feedback-link").hidden,true);
   await p.click("copy-fork-name");
   assert.equal(p.copied.at(-1),"hammerdb-results-hammerdbltd");
   assert.equal(p.$("copy-fork-name").textContent,"Fork name copied");
+});
+
+test("sm-shaw's TPC-Council fork is never reused or overwritten during testing",async()=>{
+  const p=await mount({login:"sm-shaw",mode:"wrong-parent"});
+  await p.click("continue-github");
+  assert.equal(p.tabs[0].closed,true);
+  assert.equal(p.tabs[0].navigated,null);
+  assert.equal(p.$("fork-account").textContent,"sm-shaw");
+  assert.equal(p.$("fork-repository").value,"hammerdb-results-hammerdbltd");
+  assert.match(p.$("fork-create-instructions").textContent,/Replace that name with hammerdb-results-hammerdbltd/);
+  await p.click("open-fork-page");
+  assert.equal(p.copied.at(-1),"hammerdb-results-hammerdbltd");
+  assert.equal(p.tabs[1].navigated,"https://github.com/HammerDBLtd/hammerdb-results/fork");
+  assert.ok(!p.tabs.some(tab=>String(tab.navigated).includes("sm-shaw/hammerdb-results/new")));
+});
+
+test("clipboard failure blocks the new fork page and leaves exact name visible",async()=>{
+  const p=await mount({login:"sm-shaw",mode:"wrong-parent",clipboard:"all-denied"});
+  await p.click("continue-github");
+  await p.click("open-fork-page");
+  assert.equal(p.tabs[1].closed,true);
+  assert.equal(p.tabs[1].navigated,null);
+  assert.equal(p.$("required-fork-name").textContent,"hammerdb-results-hammerdbltd");
+  assert.equal(p.$("fork-create-guide").hidden,false);
+  assert.match(p.$("fork-feedback-message").textContent,/Copy the exact repository name/);
+  assert.equal(p.$("fork-feedback-link").href,"https://github.com/HammerDBLtd/hammerdb-results/fork");
 });
 
 test("if Lucas already created a correctly parented alternate fork, reuse it directly",async()=>{
@@ -256,8 +286,11 @@ test("when the suggested name is also taken, find the next unused name",async()=
   await p.click("continue-github");
   assert.equal(p.$("fork-repository").value,"hammerdb-results-hammerdbltd-2");
   assert.equal(p.$("required-fork-name").textContent,"hammerdb-results-hammerdbltd-2");
-  assert.equal(p.tabs[0].closed,false);
-  assert.equal(p.tabs[0].navigated,"https://github.com/HammerDBLtd/hammerdb-results/fork");
+  assert.equal(p.tabs[0].closed,true);
+  assert.equal(p.tabs[0].navigated,null);
+  await p.click("open-fork-page");
+  assert.equal(p.copied.at(-1),"hammerdb-results-hammerdbltd-2");
+  assert.equal(p.tabs[1].navigated,"https://github.com/HammerDBLtd/hammerdb-results/fork");
 });
 
 test("a separately named fork can be used after it has been created",async()=>{
