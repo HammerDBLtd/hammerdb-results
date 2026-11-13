@@ -31,6 +31,19 @@ def main() -> int:
     manifest = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else {}
     errors = []
     found = 0
+    # GitHub App submits PRs on behalf of an OAuth-authenticated contributor.
+    # Only the exact configured app bot, using a same-repo submission branch,
+    # can rely on the user identity that the server verified with GitHub.
+    app_bot = os.environ.get("SUBMISSION_APP_BOT_LOGIN", "").strip()
+    head_ref = os.environ.get("PR_HEAD_REF", "").strip()
+    head_repo = os.environ.get("PR_HEAD_REPO", "").strip()
+    target_repo = os.environ.get("GITHUB_REPOSITORY", "").strip()
+    service_pr = bool(
+        app_bot and expected.casefold() == app_bot.casefold()
+        and head_ref.startswith("submission/")
+        and head_repo.casefold() == target_repo.casefold()
+        and target_repo
+    )
     for rel in diff.stdout.splitlines():
         if not rel.startswith("results/") or not rel.endswith(".json"):
             continue
@@ -39,9 +52,11 @@ def main() -> int:
         submission = payload.get("submission") or {}
         username = submission.get("github_username")
         if isinstance(username, str) and username:
-            if username.casefold() != expected.casefold():
+            if not service_pr and username.casefold() != expected.casefold():
                 errors.append(f"{rel}: submitted by {username!r}; PR author is @{expected}. "
                               "Use the authenticated GitHub account submitting this pull request.")
+            if service_pr:
+                print(f"{rel}: identity @{username} was verified by the configured GitHub App.")
         else:
             # Already accepted upstream imports may have original PR attribution.
             # TPC-Council remains strictly read-only.
@@ -56,7 +71,8 @@ def main() -> int:
     if errors:
         print("GitHub submitter check failed:\n" + "\n".join(errors))
         return 1
-    print(f"Verified submitter identity for {found} new result artifact(s); PR author @{expected}.")
+    print(f"Verified submitter identity for {found} new result artifact(s); "
+          f"PR author @{expected}; GitHub App submission: {service_pr}.")
     return 0
 
 
