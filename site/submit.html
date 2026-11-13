@@ -55,6 +55,13 @@
     .submit-actions button{border:0;cursor:pointer}
     .submit-actions button:disabled{opacity:.4;cursor:not-allowed}
     .submit-actions .copy-button{padding:12px 17px;border:1px solid var(--border);border-radius:11px;background:var(--surface-raised);color:var(--text);font-weight:850}
+    .fork-feedback{margin-top:13px;padding:14px 16px;border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:10px;background:var(--surface-soft)}
+    .fork-feedback[hidden]{display:none!important}
+    .fork-feedback.error{border-left-color:#eb6d7f}
+    .fork-feedback.success{border-left-color:#44cdaa}
+    .fork-feedback strong{display:block;font-size:14px}
+    .fork-feedback p{font-size:13px;line-height:1.6;margin:6px 0 9px;color:var(--muted)}
+    .fork-feedback a{font-weight:850;color:var(--accent)}
     .help-panel{position:sticky;top:100px}
     .help-panel h3{font-size:18px;margin-bottom:10px}
     .help-panel ol{padding-left:19px;color:var(--muted);font-size:13px}
@@ -101,8 +108,11 @@
         <div id="workload-help" class="declare-note">Older results lacking UAW and durability data remain unclassified. IOPS / MB/s by themselves do not prove a bottleneck.</div>
       </section>
       <section class="submit-panel" id="submit-section" hidden><div class="panel-title"><span class="step-index">4</span><div><h2>Review and submit through GitHub</h2><p>Your artifact will contain the benchmark evidence plus your additional submission information.</p></div></div>
-        <div class="submit-actions"><button type="button" class="copy-button" id="copy-json">Copy enriched JSON</button><button type="button" class="action action-primary" id="continue-github">Continue to GitHub ↗</button></div>
-        <p class="field-note">On GitHub paste the copied JSON into the new file, commit, and open a pull request. The contributor's GitHub login is checked against the value you entered.</p>
+        <div class="field"><label for="fork-repository">Name of your GitHub fork</label><input id="fork-repository" value="hammerdb-results" maxlength="100" autocomplete="off" spellcheck="false"><div class="field-note">Usually hammerdb-results. If you already have that name for a fork of a different repository, use a different name for this one.</div></div>
+        <div class="submit-actions"><button type="button" class="copy-button" id="copy-json">Copy enriched JSON</button><button type="button" class="action action-primary" id="continue-github">Submit result via GitHub ↗</button></div>
+        <div id="fork-feedback" class="fork-feedback" role="status" aria-live="polite" hidden><strong id="fork-feedback-title"></strong><p id="fork-feedback-message"></p><a id="fork-feedback-link" href="#" target="_blank" rel="noopener noreferrer" hidden>Continue on GitHub</a></div>
+        <p class="field-note">The form checks your existing fork first. If you do not have one, GitHub opens its direct fork page; it will not use the failing fork-from-editor button. After pasting your JSON in your fork, commit it and open a pull request. Approved results appear on the leaderboard after merging.</p>
+        <p class="field-note">Need to make a fork? <a id="direct-fork-link" href="#" target="_blank" rel="noopener noreferrer">Open the direct GitHub fork page</a>. If you already forked a different repository under the same name, choose a different repository name on the fork page, then enter that name above.</p>
         <div class="safeguard">These are community-submitted, unaudited results. A workload badge describes declared configuration, not a measured finding of CPU or storage saturation.</div>
         <details class="raw-preview"><summary>Inspect the generated JSON</summary><pre id="generated-json">Select an artifact to preview.</pre></details>
       </section>
@@ -221,6 +231,7 @@
     ["details-section", "workload-section", "submit-section"].forEach((id) => $(id).hidden = true);
     fields.forEach((id) => { if ($(id).tagName === "SELECT") $(id).selectedIndex = 0; else $(id).value = ""; });
     $("generated-json").textContent = "Select an artifact to preview.";
+    $("fork-feedback").hidden = true;
   }
   async function loadArtifact(raw) {
     reset();
@@ -243,7 +254,7 @@
     renderPreview(parsed);
     $("result-path").textContent = path;
     prefillConfig(parsed);
-    status("Checking for duplicates", "Checking whether this result is already in HammerDB Ltd…");
+    status("Checking for duplicates", "Checking whether this result is already published in " + TARGET_OWNER + "/" + TARGET_REPO + "…");
     try {
       const exists = await existsInRepo(path);
       if (id !== validationId) return;
@@ -313,19 +324,146 @@
     try { $("generated-json").textContent = buildSubmission(); }
     catch (error) { $("generated-json").textContent = "Complete the required fields to preview enriched JSON.\n" + error.message; }
   }
-  async function copyJson() {
-    let json;
-    try { json = buildSubmission(); } catch (error) { status("Check submission details", error.message, "error"); return false; }
-    $("generated-json").textContent = json;
-    try {
-      await navigator.clipboard.writeText(json);
-      status("JSON copied", "Continue to GitHub, paste the enriched JSON into the new-file editor, commit and open your PR.", "success");
-      return true;
-    } catch (error) {
-      document.querySelector(".raw-preview").open = true;
-      status("Clipboard unavailable", "Copy the enriched JSON manually from the preview, then continue to GitHub.", "error");
-      return false;
+  const upstreamRepository = TARGET_OWNER + "/" + TARGET_REPO;
+  const forkUrl = "https://github.com/" + upstreamRepository + "/fork";
+  $("direct-fork-link").href = forkUrl;
+
+  function showForkFeedback(title, message, kind, url, linkText){
+    $("fork-feedback").hidden = false;
+    $("fork-feedback").className = "fork-feedback" + (kind ? " " + kind : "");
+    $("fork-feedback-title").textContent = title;
+    $("fork-feedback-message").textContent = message;
+    $("fork-feedback-link").hidden = !url;
+    if(url){
+      $("fork-feedback-link").href = url;
+      $("fork-feedback-link").textContent = linkText || "Continue on GitHub";
     }
+    $("fork-feedback").scrollIntoView?.({block:"nearest"});
+  }
+
+  function chosenForkName(){
+    const name = $("fork-repository").value.trim();
+    if(!/^[a-z0-9_.-]{1,100}$/i.test(name) || name==="." || name==="..")
+      throw Error("Enter a valid fork repository name (letters, numbers, hyphens, underscores or dots).");
+    return name;
+  }
+
+  function forkEditorUrl(login,repo,branch){
+    return "https://github.com/" + encodeURIComponent(login) + "/" + encodeURIComponent(repo) +
+      "/new/" + encodeURIComponent(branch) + "?filename=" + encodeURIComponent(resultPath);
+  }
+
+  async function lookupFork(login, forkName){
+    let response;
+    try{
+      response = await fetch("https://api.github.com/repos/" +
+        encodeURIComponent(login) + "/" + encodeURIComponent(forkName),{
+          headers:{"Accept":"application/vnd.github+json"},cache:"no-store"
+        });
+    }catch(error){return {kind:"unknown"};}
+    if(response.status===404)return {kind:"missing"};
+    if(!response.ok)return {kind:"unknown"};
+    let repo;
+    try{repo=await response.json();}
+    catch(error){return {kind:"unknown"};}
+    const expected=upstreamRepository.toLowerCase();
+    const actualParents=[repo.parent?.full_name,repo.source?.full_name]
+      .map(x=>String(x||"").toLowerCase());
+    if(repo.fork!==true || !actualParents.includes(expected))
+      return {kind:"different",parent:repo.parent?.full_name || repo.source?.full_name || ""};
+    const ref=typeof repo.default_branch==="string" &&
+      /^[a-z0-9][a-z0-9._/-]{0,127}$/i.test(repo.default_branch)
+      ? repo.default_branch : TARGET_BRANCH;
+    return {kind:"ready",url:forkEditorUrl(login,forkName,ref)};
+  }
+
+  async function copyToClipboard(text){
+    try {
+      if(navigator.clipboard?.writeText){
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    }catch(error){}
+    const textarea=document.createElement("textarea");
+    textarea.value=text;
+    textarea.setAttribute("readonly","");
+    textarea.style.position="fixed";
+    textarea.style.top="-9999px";
+    document.body.appendChild(textarea);
+    textarea.focus();textarea.select();
+    let copied=false;
+    try {copied=typeof document.execCommand==="function" && document.execCommand("copy");}
+    finally {textarea.remove();}
+    return copied;
+  }
+
+  async function copyJson(){
+    let json;
+    try{json=buildSubmission();}
+    catch(error){showForkFeedback("Check submission details",error.message,"error");return false;}
+    $("generated-json").textContent=json;
+    const copied=await copyToClipboard(json);
+    if(copied)showForkFeedback("JSON copied","Select Submit result via GitHub to continue.","success");
+    else{
+      document.querySelector(".raw-preview").open=true;
+      showForkFeedback("Copy the JSON manually","Automatic copying was blocked. Expand the JSON below and copy it before continuing.","error");
+    }
+    return copied;
+  }
+
+  async function continueOnGitHub(){
+    let json,forkName;
+    try{json=buildSubmission();forkName=chosenForkName();}
+    catch(error){showForkFeedback("Check submission details",error.message,"error");return;}
+    $("generated-json").textContent=json;
+    const login=$("github-username").value.trim().replace(/^@/,"");
+    // Start clipboard and new-tab creation synchronously in the click to preserve activation.
+    const copying=copyToClipboard(json);
+    const tab=window.open("about:blank","_blank");
+    if(tab)tab.opener=null;
+    const [copied,destination]=await Promise.all([copying,lookupFork(login,forkName)]);
+    if(!copied){
+      try{tab?.close();}catch(error){}
+      document.querySelector(".raw-preview").open=true;
+      showForkFeedback("Copy the JSON manually",
+        "Automatic copying failed. Open the JSON preview below, copy it, then continue using the GitHub link.",
+        "error",destination.kind==="ready"?destination.url:forkUrl,
+        destination.kind==="ready"?"Open your fork editor":"Open direct fork page");
+      return;
+    }
+    if(destination.kind==="unknown"){
+      try{tab?.close();}catch(error){}
+      showForkFeedback("Fork check unavailable",
+        "JSON copied, but GitHub could not confirm your fork. Check your GitHub login and fork repository name. You can retry, or open the direct fork page below. We will not send you to the failing original-repository editor.",
+        "error",forkUrl,"Open direct fork page");
+      return;
+    }
+    if(destination.kind==="different"){
+      const proposed=TARGET_REPO+"-"+TARGET_OWNER.toLowerCase();
+      if(forkName.toLowerCase()===TARGET_REPO.toLowerCase())$("fork-repository").value=proposed;
+      const targetName=$("fork-repository").value.trim();
+      const message="JSON copied. Your "+login+"/"+forkName+" repository is not a fork of "+
+        upstreamRepository+(destination.parent?" (it belongs to "+destination.parent+")":"")+
+        ". On the direct GitHub fork page, choose the different repository name '"+targetName+
+        "'. Then return here and click Submit result via GitHub again. No benchmark data has been submitted yet.";
+      if(tab)tab.location.replace(forkUrl);
+      showForkFeedback("Existing fork belongs to another repository",message,"error",forkUrl,
+        "Open direct GitHub fork page");
+    }else if(destination.kind==="missing"){
+      if(tab)tab.location.replace(forkUrl);
+      showForkFeedback("Create your fork on GitHub",
+        "JSON copied. Create a fork of "+upstreamRepository+" using repository name '"+forkName+
+        "'. Return here and click Submit result via GitHub again. Your JSON stays in the form.",
+        "success",forkUrl,"Open direct GitHub fork page");
+    }else{
+      if(tab)tab.location.replace(destination.url);
+      showForkFeedback("Open your fork and create the result file",
+        "JSON copied. In GitHub paste it into "+resultPath+
+        ", commit the file in a branch of your fork, and open a pull request to "+
+        upstreamRepository+". After review and merge the result appears on the leaderboard.",
+        "success",destination.url,"Open your fork file editor");
+    }
+    if(!tab)$("fork-feedback-message").textContent+=" Your browser blocked the new tab; use the link below.";
   }
 
   $("choose-file").addEventListener("click", () => $("artifact-file").click());
@@ -341,17 +479,7 @@
   });
   fields.forEach((id) => $(id).addEventListener("input", updateGeneratedPreview));
   $("copy-json").addEventListener("click", copyJson);
-  $("continue-github").addEventListener("click", async () => {
-    let json;
-    try { json = buildSubmission(); } catch (error) { status("Check submission details", error.message, "error"); return; }
-    $("generated-json").textContent = json;
-    try { await navigator.clipboard.writeText(json); }
-    catch (error) { document.querySelector(".raw-preview").open = true; }
-    const url = "https://github.com/" + TARGET_OWNER + "/" + TARGET_REPO + "/new/" +
-      TARGET_BRANCH + "?filename=" + encodeURIComponent(resultPath);
-    window.open(url, "_blank", "noopener");
-    status("Continue on GitHub", "Paste the generated JSON into the editor and open a pull request using the GitHub account you declared.", "success");
-  });
+  $("continue-github").addEventListener("click", continueOnGitHub);
   const artifactUrl = new URLSearchParams(location.search).get("artifact_url");
   if (artifactUrl) {
     status("Loading saved artifact", "Retrieving the supplied benchmark JSON URL…");
