@@ -110,6 +110,7 @@ async function mount({repoOwner="HammerDBLtd",login="ls250",mode="existing",
     requests.push(String(url));
     if(url===artifactUrl) return {status:200,ok:true,text:async()=>JSON.stringify(sampleArtifact)};
     if(url.startsWith("https://raw.githubusercontent.com/")){
+      if(url.startsWith("https://raw.githubusercontent.com/"+repoOwner+"/hammerdb-results/"))return {status:404,ok:false};
       if(!committed)return {status:404,ok:false};
       const file={
         ...sampleArtifact,
@@ -210,7 +211,7 @@ test("a first-time contributor gets a clear fork name BEFORE navigating to GitHu
   assert.equal(p.$("fork-create-guide").hidden,false);
   assert.equal(p.$("required-fork-name").textContent,"hammerdb-results");
   assert.equal(p.$("fork-feedback-link").href,"https://github.com/HammerDBLtd/hammerdb-results/fork");
-  assert.match(p.$("fork-feedback-message").textContent,/change it to the exact name/);
+  assert.match(p.$("fork-feedback-message").textContent,/Use the name shown below/);
   assert.equal(p.copied.length,1);
   assert.ok(p.backingStorage.has("hammerdb-results-submission-draft:hammerdbltd/hammerdb-results"));
 });
