@@ -326,7 +326,7 @@ test("when popup is blocked an existing fork has a working fallback link",async(
   await p.click("continue-github");
   assert.equal(p.tabs.length,0);
   assert.match(p.$("fork-feedback-link").href,/^https:\/\/github\.com\/ls250\/hammerdb-results\/new\/main\?filename=results%2F/);
-  assert.match(p.$("fork-feedback-message").textContent,/blocked the new tab/);
+  assert.match(p.$("fork-feedback-message").textContent,/Open your fork editor using this link/);
 });
 
 test("edits to the form are restored after returning from GitHub",async()=>{
@@ -434,7 +434,7 @@ test("clicking Finish before saving never opens an empty PR",async()=>{
   assert.equal(p.tabs[1].closed,true);
   assert.equal(p.tabs[1].navigated,null);
   assert.equal(p.$("submission-progress").dataset.stage,"editing");
-  assert.match(p.$("submission-progress-title").textContent,/Save the result/);
+  assert.match(p.$("submission-progress-title").textContent,/Finish your GitHub submission/);
 });
 
 test("after the GitHub commit one click finishes submission by opening the PR",async()=>{
@@ -493,7 +493,7 @@ test("submission is resumable with a PR step after reloading the page",async()=>
   await q.focus();
   assert.equal(q.$("fork-repository").value,"hammerdb-results");
   assert.equal(q.$("submission-progress").dataset.stage,"editing");
-  assert.match(q.$("submission-progress-detail").textContent,/Finish submission/);
+  assert.match(q.$("submission-progress-detail").textContent,/Open pull request/);
 });
 
 test("the production target constructs a TPC-Council PR (not HammerDB Ltd)",async()=>{
@@ -561,7 +561,7 @@ test("no second fork is suggested if GitHub cannot verify the user's existing fo
 test("normal form exposes one primary Submit button and hides technical backup tools",()=>{
   const submission=html.slice(html.indexOf('id="submit-section"'),html.indexOf('</section>',html.indexOf('id="submit-section"')));
   assert.match(submission,/id="continue-github">Submit result/);
-  assert.match(submission,/<details class="raw-preview">Result backup and troubleshooting/);
+  assert.match(submission,/<details class="raw-preview"><summary>Result backup and troubleshooting/);
   assert.ok(!submission.includes('id="fork-options"'));
   assert.ok(!submission.includes("GitHub fork repository name"));
   assert.ok(!submission.includes("Copy enriched JSON</button>"));
