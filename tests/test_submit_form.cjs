@@ -261,7 +261,7 @@ test("when the suggested name is also taken, find the next unused name",async()=
 });
 
 test("a separately named fork can be used after it has been created",async()=>{
-  const p=await mount({login:"ls250",mode:"existing",forkName:"hammerdb-results-hammerdbltd"});
+  const p=await mount({login:"ls250",mode:"collision-alt-ready"});
   await p.click("continue-github");
   assert.match(p.tabs[0].navigated,/^https:\/\/github\.com\/ls250\/hammerdb-results-hammerdbltd\/new\/main\?filename=results%2F/);
 });
@@ -299,7 +299,8 @@ test("missing username reports error without opening GitHub",async()=>{
 });
 
 test("invalid fork repository name is caught before navigation",async()=>{
-  const p=await mount({forkName:"other/name"});
+  const p=await mount();
+  p.$("fork-repository").value="other/name";
   await p.click("continue-github");
   assert.equal(p.tabs.length,0);
   assert.match(p.$("fork-feedback-message").textContent,/fork repository name/);
@@ -400,7 +401,7 @@ test("the controller cannot open GitHub's failing new-file editor in the origina
 
 test("Lucas's already committed result opens the prefilled PR, not another editor",async()=>{
   const p=await mount({
-    login:"ls250",mode:"existing",forkName:"hammerdb-results-hammerdbltd",
+    login:"ls250",mode:"collision-alt-ready",
     initiallyCommitted:true
   });
   await p.click("continue-github");
