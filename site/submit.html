@@ -100,6 +100,7 @@
     <div class="flow-main">
       <section class="submit-panel"><div class="panel-title"><span class="step-index">1</span><div><h2>Select your result artifact</h2><p>Use the JSON downloaded from HammerDB. The benchmark data and configuration are preserved.</p></div></div>
         <div id="drop-zone" class="upload-zone"><div class="upload-icon" aria-hidden="true">⇧</div><strong>Drop your JSON artifact here</strong><p>or choose a file from your computer</p><button type="button" class="file-choose" id="choose-file">Choose JSON artifact</button><input id="artifact-file" type="file" accept="application/json,.json" hidden></div>
+        <div id="resume-draft-controls" class="submit-actions" hidden><button type="button" class="file-choose" id="resume-draft">Resume an unfinished submission</button></div>
         <div id="preview" hidden><div class="preview-stats" id="preview-data"></div><p class="field-note">Result location: <code id="result-path"></code></p></div>
       </section>
       <section class="submit-panel" id="details-section" hidden><div class="panel-title"><span class="step-index">2</span><div><h2>Who is submitting this result?</h2><p>Attribution is shown on the leaderboard and links directly to the submitter's GitHub profile.</p></div></div>
@@ -241,6 +242,7 @@
   function reset() {
     artifact = null; resultPath = ""; ready = false; validationId++;
     $("preview").hidden = true;
+    $("resume-draft-controls").hidden = true;
     ["details-section", "workload-section", "submit-section"].forEach((id) => $(id).hidden = true);
     fields.forEach((id) => { if ($(id).tagName === "SELECT") $(id).selectedIndex = 0; else $(id).value = ""; });
     $("generated-json").textContent = "Select an artifact to preview.";
@@ -364,6 +366,15 @@
       $("draft-status").textContent="Browser storage unavailable. Download the JSON backup before leaving this page.";
       return false;
     }
+  }
+
+  function hasSavedDraft(){
+    try{
+      const saved=localStorage.getItem(DRAFT_KEY);
+      if(!saved)return false;
+      const data=JSON.parse(saved);
+      return Boolean(data && data.artifact && data.values && typeof data.values==="object");
+    }catch(error){return false;}
   }
 
   async function restoreDraft(){
@@ -848,8 +859,10 @@
   });
   $("clear-draft").addEventListener("click",()=>{
     try{localStorage.removeItem(DRAFT_KEY);}catch(error){}
+    $("resume-draft-controls").hidden=true;
     $("draft-status").textContent="Browser backup cleared. Your current form remains open.";
   });
+  $("resume-draft").addEventListener("click",()=>{void restoreDraft();});
   $("continue-github").addEventListener("click",continueOnGitHub);
   $("finish-pr").addEventListener("click",()=>refreshSubmission({openTab:true}));
   // Returning from the GitHub editor automatically updates the next step.
@@ -868,7 +881,10 @@
     ).then((response) => { if (!response.ok) throw Error("HTTP " + response.status); return response.text(); })
       .then(loadArtifact).catch((error) => status("Unable to load artifact", error.message + ". You can still select the saved JSON file.", "error"));
   }else{
-    void restoreDraft();
+    // A normal refresh must start with an empty upload form.
+    // Keep the optional draft for recovery, but never load it automatically.
+    reset();
+    $("resume-draft-controls").hidden=!hasSavedDraft();
   }
 })();
 </script>
