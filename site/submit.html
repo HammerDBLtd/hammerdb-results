@@ -248,6 +248,7 @@
     artifact = parsed; resultPath = path;
     renderPreview(parsed);
     $("result-path").textContent = path;
+    if(TARGET_OWNER === "HammerDBLtd") $("dev-editor-link").href = editorUrl(TARGET_OWNER,TARGET_BRANCH);
     prefillConfig(parsed);
     status("Checking for duplicates", "Checking whether this result is already published in " + TARGET_OWNER + "/" + TARGET_REPO + "…");
     try {
@@ -421,8 +422,8 @@
     }
     if(destination.kind==="unavailable"){
       try{tab?.close();}catch(e){}
-      feedback("Unable to check your fork","JSON copied. If you already have a fork, open its editor below; otherwise use the direct fork link.","error",
-        editorUrl(login,TARGET_BRANCH),"Open your fork editor");
+      feedback("Unable to check your fork","JSON copied. GitHub could not verify your fork. If you already have one, open its repository below. Otherwise use the direct fork link.","error",
+        "https://github.com/" + encodeURIComponent(login) + "/" + TARGET_REPO,"Open your existing repository");
       return;
     }
     if(tab)tab.location.replace(destination.url);
@@ -450,9 +451,6 @@
   fields.forEach(id=>$(id).addEventListener("input",updateGeneratedPreview));
   $("copy-json").addEventListener("click",copyJson);
   $("continue-github").addEventListener("click",continueOnGitHub);
-  $("dev-editor-link").addEventListener("click",()=>{
-    $("dev-editor-link").href=editorUrl(TARGET_OWNER,TARGET_BRANCH);
-  });
   const artifactUrl = new URLSearchParams(location.search).get("artifact_url");
   if (artifactUrl) {
     status("Loading saved artifact", "Retrieving the supplied benchmark JSON URL…");

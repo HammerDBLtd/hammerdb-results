@@ -172,7 +172,7 @@ test("GitHub API failure shows recovery links, never inline upstream editor",asy
   await p.click("continue-github");
   assert.equal(p.tabs[0].closed,true);
   assert.match(p.$("submit-next-detail").textContent,/could not confirm|unable to check|already have a fork/i);
-  assert.match(p.$("submit-next-link").href,/https:\/\/github\.com\/rpbbox\/hammerdb-results\/new\/main/);
+  assert.equal(p.$("submit-next-link").href,"https://github.com/rpbbox/hammerdb-results");
 });
 
 test("missing GitHub username gives visible error next to actions",async()=>{
@@ -205,7 +205,6 @@ test("the development page offers direct maintainer testing without changing for
   const p=await mount({repoOwner:"HammerDBLtd",login:"sm-shaw",mode:"wrong-parent"});
   assert.equal(p.$("dev-direct-editor").hidden,false);
   assert.equal(p.$("direct-fork-link").href,"https://github.com/HammerDBLtd/hammerdb-results/fork");
-  await p.click("dev-editor-link");
   assert.match(p.$("dev-editor-link").href,/https:\/\/github\.com\/HammerDBLtd\/hammerdb-results\/new\/main\?filename=results%2F/);
 });
 
