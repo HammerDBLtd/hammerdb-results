@@ -360,6 +360,8 @@
     return copied;
   }
   async function forkDestination(login){
+    // Development Pages is a maintainer test copy, not the upstream fork network.
+    if(TARGET_OWNER==="HammerDBLtd")return {kind:"development",url:editorUrl(TARGET_OWNER,TARGET_BRANCH)};
     if(login.toLowerCase()===TARGET_OWNER.toLowerCase())
       return {kind:"editor",url:editorUrl(TARGET_OWNER,TARGET_BRANCH)};
     let response;
@@ -408,9 +410,10 @@
     if(!copied){
       try{tab?.close();}catch(e){}
       document.querySelector(".raw-preview").open=true;
-      const link=destination.kind==="editor"||destination.kind==="fork"?destination.url:forkUrl;
+      const direct=["editor","fork","development"].includes(destination.kind);
+      const link=direct?destination.url:forkUrl;
       feedback("Copy manually","Copy the JSON below, then use the GitHub link to continue.","error",
-        link,destination.kind==="editor"?"Open your fork editor":"Create your fork directly");
+        link,destination.kind==="editor"?"Open your fork editor":destination.kind==="development"?"Open development editor":"Create your fork directly");
       return;
     }
     if(destination.kind==="other"){
@@ -430,6 +433,10 @@
     if(destination.kind==="fork"){
       feedback("Create your fork on GitHub","Finish creating your fork in the new tab. Return here and click Submit result via GitHub again. Your JSON stays on this page.","success",
         destination.url,"Open GitHub fork setup");
+    }else if(destination.kind==="development"){
+      feedback("Development editor is open",
+        "JSON copied. Paste it into the HammerDB Ltd editor, commit to a new branch and open a PR to HammerDB Ltd. This requires write access. After approval, your result appears on the development leaderboard.",
+        "success",destination.url,"Open development editor");
     }else{
       feedback("Your GitHub editor is open","JSON copied. Paste it into your fork, commit to a branch and open a pull request to "+
         TARGET_OWNER+"/"+TARGET_REPO+". The result appears on the leaderboard after approval.","success",
