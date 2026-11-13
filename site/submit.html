@@ -246,6 +246,7 @@
     $("generated-json").textContent = "Select an artifact to preview.";
     $("fork-feedback").hidden = true;
     $("fork-create-guide").hidden = true;
+    $("fork-repository").value = TARGET_REPO;
     $("submission-progress").hidden = true;
     $("submission-progress").dataset.stage = "idle";
     pendingSubmission = null;
@@ -500,12 +501,12 @@
     // Name matches first. A fork may be renamed, so do not assume that a
     // nonstandard fork name means no matching fork exists.
     // Avoid creating another fork if verification is rate-limited.
-    if(matches.length>55)return {kind:"unknown"};
-    for(const name of matches){
+    for(const name of matches.slice(0,55)){
       const found=await lookupFork(login,name);
       if(found.kind==="ready")return found;
       if(found.kind==="unknown")return {kind:"unknown"};
     }
+    if(matches.length>55)return {kind:"unknown"};
     return {kind:"missing"};
   }
 
@@ -796,6 +797,14 @@
     updateGeneratedPreview();
     saveDraft();
   }));
+  $("github-username").addEventListener("input",()=>{
+    // A new GitHub user must never inherit the previous user's fork name.
+    $("fork-repository").value=TARGET_REPO;
+    pendingSubmission=null;
+    $("submission-progress").hidden=true;
+    $("submission-progress").dataset.stage="idle";
+    saveDraft();
+  });
   $("fork-repository").addEventListener("input",saveDraft);
   $("copy-json").addEventListener("click",copyJson);
   $("download-json").addEventListener("click",downloadJson);

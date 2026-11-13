@@ -122,7 +122,8 @@ async function mount({repoOwner="HammerDBLtd",login="ls250",mode="existing",
       if(mode==="user-list-403")return {status:403,ok:false};
       const names=mode==="collision-alt-ready" ?
         ["hammerdb-results-hammerdbltd"] :
-        mode==="existing-alt-custom" ? ["my-custom-benchmarks"] : [];
+        mode==="existing-alt-custom" ? ["my-custom-benchmarks"] :
+        mode==="bulk-forks" ? [...Array.from({length:60},(_,i)=>"other-repo-"+i),"hammerdb-results-hammerdbltd"] : [];
       return {status:200,ok:true,json:async()=>names.map(name=>({name,fork:true}))};
     }
     if(url.startsWith("https://api.github.com/repos/") && url.includes("/pulls?")){
@@ -141,7 +142,7 @@ async function mount({repoOwner="HammerDBLtd",login="ls250",mode="existing",
       if(mode==="unauthorized")return {status:403,ok:false};
       if(mode==="custom" && url.endsWith("/hammerdb-results"))return {status:404,ok:false};
       const isDefault=url.endsWith("/hammerdb-results");
-      const parent=(["wrong-parent","collision-alt-ready","collision-alt-conflict","existing-alt-custom","user-list-403"].includes(mode)) && isDefault
+      const parent=(["wrong-parent","collision-alt-ready","collision-alt-conflict","existing-alt-custom","user-list-403","bulk-forks"].includes(mode)) && isDefault
         ? "TPC-Council/hammerdb-results"
         : mode==="wrong-parent"&&url.includes("/hammerdb-results-hammerdbltd")
         ? null
@@ -571,4 +572,25 @@ test("Github GitHub 422 warning and direct fork recovery are included",()=>{
   assert.ok(html.includes("HTTP 422"));
   assert.ok(script.includes('const forkUrl = "https://github.com/" + upstreamRepository + "/fork"'));
   assert.match(script,/discoverExistingFork\(login,preferredName\)/);
+});
+
+
+test("changing the submitter never reuses a previous account's fork",async()=>{
+  const p=await mount({login:"ls250",mode:"collision-alt-ready"});
+  await p.click("continue-github");
+  assert.equal(p.$("fork-repository").value,"hammerdb-results-hammerdbltd");
+  p.$("github-username").value="different-user";
+  await p.input("github-username");
+  assert.equal(p.$("fork-repository").value,"hammerdb-results");
+  assert.equal(p.$("submission-progress").hidden,true);
+  assert.equal(p.$("submission-progress").dataset.stage,"idle");
+});
+
+test("when a user has many forks a matching HammerDB fork is still reused",async()=>{
+  const p=await mount({login:"ls250",mode:"bulk-forks"});
+  await p.click("continue-github");
+  assert.equal(p.$("fork-repository").value,"hammerdb-results-hammerdbltd");
+  assert.match(p.tabs[0].navigated,
+    /^https:\/\/github\.com\/ls250\/hammerdb-results-hammerdbltd\/new\/main\?filename=results%2F/);
+  assert.doesNotMatch(p.tabs[0].navigated,/\/fork$/);
 });
