@@ -121,16 +121,13 @@
         <div id="workload-help" class="declare-note">Older results lacking UAW and durability data remain unclassified. IOPS / MB/s by themselves do not prove a bottleneck.</div>
       </section>
       <section class="submit-panel" id="submit-section" hidden><div class="panel-title"><span class="step-index">4</span><div><h2>Submit result</h2><p>We prepare your JSON and take you through the GitHub review process.</p></div></div>
-        <details id="fork-options" class="fork-advanced"><summary>GitHub fork options (usually not needed)</summary><div class="field"><label for="fork-repository">GitHub fork repository name</label><input id="fork-repository" value="hammerdb-results" maxlength="100" autocomplete="off" spellcheck="false"><div class="field-note">We find your existing fork or an available name automatically. Never delete an existing fork.</div></div></details>
-        <div class="submit-actions"><button type="button" class="copy-button" id="copy-json">Copy enriched JSON</button><button type="button" class="copy-button" id="download-json">Download JSON backup</button><button type="button" class="action action-primary" id="continue-github">Submit result ↗</button></div>
-        <p id="draft-status" class="draft-status">Your submission is saved locally in this browser while you set up GitHub. You can also download the JSON backup.</p>
-        <button type="button" class="file-choose" id="clear-draft">Clear browser backup</button>
-        <div id="fork-feedback" class="fork-feedback" role="status" aria-live="polite" hidden><strong id="fork-feedback-title"></strong><p id="fork-feedback-message"></p><div id="fork-create-guide" class="fork-create-guide" hidden><p>On GitHub's fork page, set <strong>Repository name</strong> to:</p><p><code id="required-fork-name"></code></p><button type="button" id="copy-fork-name">Copy name</button><p>After creating the fork, return to this form and click <strong>Submit result</strong> again.</p></div><a id="fork-feedback-link" href="#" target="_blank" rel="noopener noreferrer" hidden>Continue on GitHub</a></div>
-        <div id="submission-progress" class="fork-feedback submission-progress" data-stage="idle" role="status" aria-live="polite" hidden><strong id="submission-progress-title"></strong><p id="submission-progress-detail"></p><div class="submit-actions"><button type="button" class="action action-primary" id="finish-pr">Finish submission — Open PR ↗</button><a id="pr-link" class="action action-primary" href="#" target="_blank" rel="noopener noreferrer" hidden>Open pull request ↗</a></div></div>
-        <p class="field-note">GitHub may need to create your fork once. After you save the JSON in GitHub, return here and select <strong>Finish submission — Open PR</strong>. The PR title and description are filled in automatically.</p>
-        <p class="field-note">Use the GitHub account above. The result appears on the leaderboard after a maintainer merges your PR.</p>
-        <div class="safeguard">These are community-submitted, unaudited results. A workload badge describes declared configuration, not a measured finding of CPU or storage saturation.</div>
-        <details class="raw-preview"><summary>Inspect the generated JSON</summary><pre id="generated-json">Select an artifact to preview.</pre></details>
+        <input type="hidden" id="fork-repository" value="hammerdb-results">
+        <div class="submit-actions"><button type="button" class="action action-primary" id="continue-github">Submit result ↗</button></div>
+        <p class="field-note">Your result will be reviewed through a GitHub pull request. It appears on the leaderboard after approval.</p>
+        <p class="field-note"><strong>GitHub issue:</strong> GitHub's in-editor “Fork” button sometimes fails with HTTP 422. This form checks for an existing fork first; if needed, it opens GitHub's direct fork page instead.</p>
+        <div id="fork-feedback" class="fork-feedback" role="status" aria-live="polite" hidden><strong id="fork-feedback-title"></strong><p id="fork-feedback-message"></p><div id="fork-create-guide" class="fork-create-guide" hidden><p>If GitHub asks for a repository name, use <strong id="required-fork-name"></strong>. <button type="button" id="copy-fork-name">Copy name</button></p></div><a id="fork-feedback-link" href="#" target="_blank" rel="noopener noreferrer" hidden>Continue on GitHub</a></div>
+        <div id="submission-progress" class="fork-feedback submission-progress" data-stage="idle" role="status" aria-live="polite" hidden><strong id="submission-progress-title"></strong><p id="submission-progress-detail"></p><div class="submit-actions"><button type="button" class="action action-primary" id="finish-pr">Open pull request ↗</button><a id="pr-link" class="action action-primary" href="#" target="_blank" rel="noopener noreferrer" hidden>Open pull request ↗</a></div></div>
+        <details class="raw-preview"><summary>Result backup and troubleshooting</summary><div class="submit-actions"><button type="button" class="copy-button" id="copy-json">Copy JSON</button><button type="button" class="copy-button" id="download-json">Download JSON</button><button type="button" class="file-choose" id="clear-draft">Clear saved draft</button></div><p id="draft-status" class="draft-status">Your result and details are saved in this browser during GitHub setup.</p><pre id="generated-json">Select an artifact to preview.</pre></details>
       </section>
     </div>
     <aside class="help-panel"><div class="eyebrow">SUBMISSION GUIDE</div><h3>Four clear steps</h3>
@@ -360,7 +357,7 @@
         savedAt:Date.now(),artifact,values,forkName:$("fork-repository").value,
         pending:pendingSubmission
       }));
-      $("draft-status").textContent="Submission saved in this browser. Return to this page after creating a fork, or download the JSON backup.";
+      $("draft-status").textContent="Your result and details are saved in this browser.";
       return true;
     }catch(error){
       $("draft-status").textContent="Browser storage unavailable. Download the JSON backup before leaving this page.";
@@ -472,20 +469,59 @@
     return index===0 ? stem : stem + "-" + (index+1);
   }
 
+  async function discoverExistingFork(login,preferredName){
+    // A user may already have a fork with a different repository name.
+    // GitHub's public user-repository API lets us find those without OAuth.
+    const matches=[];
+    for(let page=1;page<=3;page++){
+      let response,rows;
+      try{
+        response=await fetch("https://api.github.com/users/"+
+          encodeURIComponent(login)+"/repos?"+new URLSearchParams({
+            type:"owner",sort:"updated",per_page:"100",page:String(page)
+          }).toString(),{headers:{"Accept":"application/vnd.github+json"},cache:"no-store"});
+        if(!response.ok)return {kind:"unknown"};
+        rows=await response.json();
+        if(!Array.isArray(rows))return {kind:"unknown"};
+      }catch(error){return {kind:"unknown"};}
+      for(const candidate of rows){
+        if(candidate?.fork===true && typeof candidate.name==="string" &&
+          candidate.name.toLowerCase()!==preferredName.toLowerCase())
+          matches.push(candidate.name);
+      }
+      if(rows.length<100)break;
+      if(page===3)return {kind:"unknown"}; // Cannot assume there is no fork in later pages.
+    }
+    matches.sort((a,b)=>{
+      const aMatch=/hammerdb|benchmark/i.test(a)?1:0;
+      const bMatch=/hammerdb|benchmark/i.test(b)?1:0;
+      return bMatch-aMatch;
+    });
+    if(matches.length>25)return {kind:"unknown"}; // Avoid GitHub API rate exhaustion.
+    for(const name of matches){
+      const found=await lookupFork(login,name);
+      if(found.kind==="ready")return found;
+      if(found.kind==="unknown")return {kind:"unknown"};
+    }
+    return {kind:"missing"};
+  }
+
   async function resolveFork(login,preferredName){
     const first=await lookupFork(login,preferredName);
     if(first.kind==="ready"||first.kind==="unknown")return first;
+    const found=await discoverExistingFork(login,preferredName);
+    if(found.kind==="ready"||found.kind==="unknown")return found;
     if(first.kind==="missing")return {kind:"create",name:preferredName};
-    // The default name is already occupied by a fork of another project.
-    // Look for a separate correctly-parented fork before suggesting creation.
+    // The default name is occupied by an unrelated repository, such as
+    // a TPC-Council fork while testing the independent HammerDB Ltd copy.
     for(let i=0;i<6;i++){
       const candidate=preferredName.toLowerCase()===TARGET_REPO.toLowerCase()
-        ? alternativeName(i) : preferredName + "-" + (i+2);
-      const found=await lookupFork(login,candidate);
-      if(found.kind==="ready")return {...found,discovered:true};
-      if(found.kind==="missing")
+        ? alternativeName(i) : preferredName+"-"+(i+2);
+      const check=await lookupFork(login,candidate);
+      if(check.kind==="ready")return check;
+      if(check.kind==="missing")
         return {kind:"create",name:candidate,collision:preferredName,parent:first.parent};
-      if(found.kind==="unknown")return {kind:"unknown"};
+      if(check.kind==="unknown")return {kind:"unknown"};
     }
     return {kind:"unknown"};
   }
@@ -572,9 +608,8 @@
     }
     if(file==="missing"){
       try{tab?.close();}catch(error){}
-      showSubmissionProgress("editing","Save the result in GitHub first",
-        "In your GitHub tab, paste and commit the JSON to your fork's "+
-        ctx.branch+" branch. Return here and click Finish submission — Open PR.");
+      showSubmissionProgress("editing","Finish your GitHub submission",
+        "Paste and commit the JSON in GitHub, then return here and click Open pull request.");
       return;
     }
     if(file==="different"){
@@ -613,15 +648,14 @@
   function showCreationGuide(login,destination,copied){
     const name=destination.name;
     $("fork-repository").value=name;
-    $("fork-options").open=true;
     saveDraft();
-    const message=(destination.collision?
-      "Your other fork is safe. This test requires a different name. ":
-      "One-time GitHub setup. ")+
-      "Use the name shown below when creating your fork. Then return and click Submit result.";
-    showForkFeedback("Set up your GitHub fork",message,
-      copied?"success":"error",forkUrl,"Create fork on GitHub ↗");
-    $("fork-create-guide").hidden=false;
+    const different=Boolean(destination.collision);
+    const message=different
+      ? "Your existing fork is safe. For this development test, GitHub needs a different name. Use the name shown below, create the fork, then return and press Submit result again."
+      : "GitHub has opened its fork page. Create your fork once, then return and press Submit result again.";
+    showForkFeedback("Create your GitHub fork",message,
+      copied?"success":"error",forkUrl,"Open GitHub fork page");
+    $("fork-create-guide").hidden=!different;
     $("required-fork-name").textContent=name;
   }
 
@@ -632,7 +666,7 @@
     saveDraft();
     $("generated-json").textContent=json;
     const copied=await copyToClipboard(json);
-    if(copied)showForkFeedback("JSON copied","Select Submit result via GitHub to continue.","success");
+    if(copied)showForkFeedback("JSON copied","Select Submit result to continue.","success");
     else{
       document.querySelector(".raw-preview").open=true;
       showForkFeedback("Copy the JSON manually","Automatic copying was blocked. Expand the JSON below or download a JSON backup.","error");
@@ -714,30 +748,29 @@
         showForkFeedback("Copy your JSON first",
           "Automatic copying was blocked. Use the Download JSON backup button or copy the preview.",
           "error",destination.url,"Open your fork editor");
-        showSubmissionProgress("editing","Finish the GitHub submission",
-          "After saving the file in your fork, come back and click Finish submission — Open PR.");
+        showSubmissionProgress("editing","Finish your GitHub submission",
+          "After saving the file in your fork, return and click Open pull request.");
         return;
       }
       if(tab)tab.location.replace(destination.url);
-      showForkFeedback("Save your JSON in GitHub",
-        "Paste the copied JSON and commit it to the "+ctx.branch+
-        " branch in your fork. Then return to this tab to finish the PR.",
-        "success",destination.url,"Open the JSON editor");
-      showSubmissionProgress("editing","One more step after saving",
-        "Return here after committing the JSON. Click Finish submission — Open PR.");
-      if(!tab)$("fork-feedback-message").textContent+=" Your browser blocked the new tab; use the link.";
+      showSubmissionProgress("editing","Finish on GitHub",
+        "Paste the copied JSON in GitHub and commit it. Return here and click Open pull request.");
+      if(tab)$("fork-feedback").hidden=true;
+      else showForkFeedback("GitHub tab blocked","Open your fork editor using this link.",
+        "error",destination.url,"Open your GitHub editor");
       return;
     }
-    try{tab?.close();}catch(error){}
     pendingSubmission=null;
     saveDraft();
     $("submission-progress").hidden=true;
     $("submission-progress").dataset.stage="idle";
     if(destination.kind==="create"){
       if(!copied)document.querySelector(".raw-preview").open=true;
+      if(tab)tab.location.replace(forkUrl);
       showCreationGuide(login,destination,copied);
       return;
     }
+    try{tab?.close();}catch(error){}
     if(!copied)document.querySelector(".raw-preview").open=true;
     showForkFeedback("Could not check your GitHub fork",
       "Your result is saved here. Check the username and try Submit result again.",
