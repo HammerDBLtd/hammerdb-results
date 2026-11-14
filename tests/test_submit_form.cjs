@@ -31,13 +31,13 @@ const sample={
 };
 async function mount({api="https://submissions.example.workers.dev",
   oauth="https://github.com/login/oauth/authorize?client_id=test&state=123",
-  failService=false,preload=true}={}){
-  const elements=new Map(),requests=[],navigations=[],sessionValues=new Map(),pageEvents=new Map();
+  failService=false,preload=true,clipboardBlocked=false}={}){
+  const elements=new Map(),requests=[],navigations=[],pageEvents=new Map(),openedTabs=[],clipboardWrites=[];
   const get=id=>{
     if(!elements.has(id))elements.set(id,new Element(id));
     return elements.get(id);
   };
-  for(const id of ["details-section","workload-section","submit-section","preview"])get(id).hidden=true;
+  for(const id of ["details-section","workload-section","submit-section","preview","manual-pr-actions"])get(id).hidden=true;
   const document={
     documentElement:{dataset:{}},getElementById:get,
     createElement:tag=>new Element(tag),
@@ -49,6 +49,7 @@ async function mount({api="https://submissions.example.workers.dev",
   const window={
     HammerDBResultsRepo:{owner:"HammerDBLtd",repo:"hammerdb-results",branch:"main"},
     HammerDBSubmissionAPI:{endpoint:api},location:{assign(url){navigations.push(url)}},
+    open(url,target,features){openedTabs.push({url,target,features});},
     addEventListener(name,callback){const list=pageEvents.get(name)||[];list.push(callback);pageEvents.set(name,list);},
     matchMedia(){return {matches:false,addEventListener(){}}}
   };
@@ -63,13 +64,12 @@ async function mount({api="https://submissions.example.workers.dev",
     throw Error("Unexpected request "+value);
   };
   const localStorage={getItem(){return null},setItem(){},removeItem(){}};
-  const sessionStorage={
-    getItem(key){return sessionValues.get(key)||null},
-    setItem(key,value){sessionValues.set(key,String(value))},
-    removeItem(key){sessionValues.delete(key)}
-  };
+  const navigator={clipboard:{async writeText(json){
+    if(clipboardBlocked)throw Error("Clipboard blocked");
+    clipboardWrites.push(json);
+  }}};
   vm.runInNewContext(script,{document,window,location,URL,URLSearchParams,
-    fetch,localStorage,sessionStorage,console,encodeURIComponent,setTimeout},
+    fetch,localStorage,navigator,console,encodeURIComponent,setTimeout},
     {filename:"site/submit.html"});
   for(let i=0;i<5;i++)await new Promise(setImmediate);
   async function submit(login="ls250"){
@@ -78,7 +78,13 @@ async function mount({api="https://submissions.example.workers.dev",
       await callback();
     await new Promise(setImmediate);
   }
-  return {get,requests,navigations,sessionValues,submit,
+  async function click(id){
+    const handlers=get(id).events.get("click")||[];
+    assert.ok(handlers.length,"No handler for "+id);
+    for(const fn of handlers)await fn();
+    await new Promise(setImmediate);
+  }
+  return {get,requests,navigations,openedTabs,clipboardWrites,submit,click,
     pageShow(){for(const callback of pageEvents.get("pageshow")||[])callback();}
   };
 }
@@ -88,8 +94,12 @@ test("one submission form offers automatic PR and expert manual PR",()=>{
   assert.match(html,/id="pr-auto"[^>]*checked/);
   assert.match(html,/id="pr-manual"/);
   assert.match(html,/I'll create my own PR/);
-  assert.doesNotMatch(html,/id="copy-json"|id="fork-repository"|id="open-fork-page"/);
-  assert.doesNotMatch(script,/github\.com\/.*\/fork|\/new\/main|copyToClipboard|navigator\.clipboard/);
+  assert.match(html,/id="copy-json">Copy enriched JSON/);
+  assert.match(html,/id="manual-continue-github">Continue to GitHub/);
+  assert.doesNotMatch(html,/id="fork-repository"|id="open-fork-page"/);
+  assert.match(script,/navigator\.clipboard\.writeText\(json\)/);
+  assert.match(script,/window\.open\(url, "_blank", "noopener"\)/);
+  assert.doesNotMatch(script,/submit-manual\.html|resolveFork\(/);
   assert.match(html,/Select your result artifact/);
   assert.match(html,/Who is submitting this result/);
 });
@@ -148,24 +158,51 @@ test("the HammerDB Ltd form uses the clean branded Worker address without exposi
   assert.match(html,/submission-service-config\.js/);
 });
 
-test("manual choice transfers enriched JSON to proven manual form without invoking service",async()=>{
+
+test("manual choice does exactly the TPC-Council copy JSON + GitHub editor flow",async()=>{
   const p=await mount();
+  p.get("github-username").value="sm-shaw";
   p.get("pr-manual").checked=true;
   p.get("pr-auto").checked=false;
   for(const change of p.get("pr-manual").events.get("change")||[])change();
-  assert.match(p.get("continue-github").textContent,/manual PR/);
-  await p.submit("sm-shaw");
+  assert.equal(p.get("auto-pr-actions").hidden,true);
+  assert.equal(p.get("manual-pr-actions").hidden,false);
+  await p.click("copy-json");
+  assert.equal(p.clipboardWrites.length,1);
+  const enriched=JSON.parse(p.clipboardWrites[0]);
+  assert.equal(enriched.submission.github_username,"sm-shaw");
+  assert.deepEqual(JSON.parse(JSON.stringify(enriched.job)),sample.job);
+  assert.deepEqual(JSON.parse(JSON.stringify(enriched.result)),sample.result);
+  assert.match(p.get("status").querySelector("strong").textContent,/JSON copied/);
+  await p.click("manual-continue-github");
+  assert.equal(p.clipboardWrites.length,2,"Continue to GitHub copies the same JSON again");
+  assert.equal(p.clipboardWrites[0],p.clipboardWrites[1]);
+  assert.equal(p.openedTabs.length,1);
+  assert.equal(p.openedTabs[0].url,
+    "https://github.com/HammerDBLtd/hammerdb-results/new/main?filename="+
+    encodeURIComponent("results/tproc-c/mariadb/2026/11/FAKEABC123.json"));
+  assert.equal(p.openedTabs[0].target,"_blank");
+  assert.equal(p.openedTabs[0].features,"noopener");
+  assert.equal(p.navigations.length,0,"Manual choice must not start OAuth");
   assert.equal(p.requests.some(r=>r.url.endsWith("/submissions")),false);
-  assert.deepEqual(p.navigations,["submit-manual.html?handoff=1"]);
-  const handoff=p.sessionValues.get("hammerdb-results-manual-handoff");
-  assert.ok(handoff,"The result must be retained for manual routing");
-  const result=JSON.parse(handoff);
-  assert.equal(result.submission.github_username,"sm-shaw");
-  assert.equal(result.job.jobid,"FAKEABC123");
-  assert.equal(result.result.nopm,800000);
+  assert.match(p.get("status").querySelector("p").textContent,/paste the generated JSON into the editor/i);
 });
 
-test("returning from GitHub OAuth unlocks the button without losing validated details",async()=>{
+test("manual copy failure exposes JSON preview, same as TPC-Council",async()=>{
+  const p=await mount({clipboardBlocked:true});
+  p.get("github-username").value="sm-shaw";
+  p.get("pr-manual").checked=true;
+  for(const change of p.get("pr-manual").events.get("change")||[])change();
+  await p.click("copy-json");
+  assert.equal(p.get(".raw-preview").open,true);
+  assert.match(p.get("status").querySelector("strong").textContent,/Clipboard unavailable/);
+  assert.equal(p.openedTabs.length,0);
+  await p.click("manual-continue-github");
+  assert.equal(p.openedTabs.length,1);
+  assert.equal(p.get(".raw-preview").open,true);
+});
+
+test("returning from GitHub OAuth unlocks the automatic button and keeps manual choice working",async()=>{
   const p=await mount();
   await p.submit("ls250");
   assert.equal(p.get("continue-github").disabled,true);
@@ -176,9 +213,11 @@ test("returning from GitHub OAuth unlocks the button without losing validated de
   assert.equal(p.get("github-username").value,"ls250");
   p.get("pr-manual").checked=true;
   for(const cb of p.get("pr-manual").events.get("change")||[])cb();
-  await p.submit("ls250");
-  assert.equal(p.get("continue-github").disabled,false);
-  assert.equal(p.navigations.at(-1),"submit-manual.html?handoff=1");
+  assert.equal(p.get("auto-pr-actions").hidden,true);
+  assert.equal(p.get("manual-pr-actions").hidden,false);
+  await p.click("manual-continue-github");
+  assert.equal(p.openedTabs.length,1);
+  assert.equal(p.navigations.length,1,"Manual route does not perform another OAuth");
   assert.equal(p.requests.filter(r=>r.url.endsWith("/submissions")).length,1);
 });
 
@@ -189,5 +228,6 @@ test("switching from automatic to manual PR unlocks an OAuth-disabled button",as
   p.get("pr-manual").checked=true;
   for(const cb of p.get("pr-manual").events.get("change")||[])cb();
   assert.equal(p.get("continue-github").disabled,false);
-  assert.match(p.get("continue-github").textContent,/manual PR/);
+  assert.equal(p.get("manual-pr-actions").hidden,false);
+  assert.equal(p.get("auto-pr-actions").hidden,true);
 });
