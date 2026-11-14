@@ -1,0 +1,16 @@
+# HammerDB Ltd test target. The production TPC-Council deployment must use
+# separate GitHub App installation permissions and its own deployed endpoint.
+name = "hammerdb-oneclick-submission-test"
+main = "worker.mjs"
+compatibility_date = "2026-11-13"
+
+[vars]
+GITHUB_TARGET_OWNER = "HammerDBLtd"
+GITHUB_TARGET_REPO = "hammerdb-results"
+ALLOWED_ORIGIN = "https://hammerdbltd.github.io"
+
+# Create this namespace with Wrangler and replace the placeholder ID:
+# npx wrangler kv namespace create PENDING
+[[kv_namespaces]]
+binding = "PENDING"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
