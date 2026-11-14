@@ -222,6 +222,9 @@
     throw Error("GitHub returned HTTP " + response.status);
   }
   function reset() {
+    // A previous OAuth navigation may have disabled Submit; never carry that
+    // disabled state into a newly uploaded artifact.
+    $("continue-github").disabled = false;
     artifact = null; resultPath = ""; ready = false; validationId++;
     $("preview").hidden = true;
     ["details-section", "workload-section", "submit-section"].forEach((id) => $(id).hidden = true);
@@ -333,6 +336,8 @@
   });
   fields.forEach((id) => $(id).addEventListener("input", updateGeneratedPreview));
   function updatePrMode(){
+    // Switching PR routes must not inherit a disabled button from OAuth.
+    $("continue-github").disabled = false;
     const manual=$("pr-manual").checked;
     $("continue-github").textContent=manual
       ? "Continue to GitHub (manual PR) ↗" : "Submit result ↗";
@@ -340,6 +345,11 @@
       ? "Sign in to your GitHub account and authorise if prompted. You will create the PR yourself, using the original tested manual route. Your JSON and details will carry over."
       : "One click submits your result for review. GitHub may ask you to sign in or authorize the HammerDB submission app once.";
   }
+  // Browsers can restore a page from the back/forward cache after GitHub
+  // authorization, including the button's transient disabled state.
+  window.addEventListener?.("pageshow", () => {
+    $("continue-github").disabled = false;
+  });
   $("pr-auto").addEventListener("change",updatePrMode);
   $("pr-manual").addEventListener("change",updatePrMode);
   $("continue-github").addEventListener("click", async () => {
