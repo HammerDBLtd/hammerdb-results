@@ -121,11 +121,11 @@
         <div class="field"><label for="workload-details">Evidence / configuration settings</label><textarea id="workload-details" maxlength="1200" rows="5" placeholder="Describe settings such as use all warehouses, innodb_flush_log_at_trx_commit, sync_binlog, synchronous_commit, SQL Server durability, log I/O and buffer sizes."></textarea><div class="field-note">Required (20 characters minimum) for a CPU- or I/O-intensive badge. Can be based on a manual run; no pipeline required.</div></div>
         <div id="workload-help" class="declare-note">Older results lacking UAW and durability data remain unclassified. IOPS / MB/s by themselves do not prove a bottleneck.</div>
       </section>
-      <section class="submit-panel" id="submit-section" hidden><div class="panel-title"><span class="step-index">4</span><div><h2>Create your own PR on GitHub</h2><p>The original tested manual route opens your fork editor and prepares the pull request.</p></div></div>
+      <section class="submit-panel" id="submit-section" hidden><div class="panel-title"><span class="step-index">4</span><div><h2>Create your own PR on GitHub</h2><p>Prepare your JSON and use your own GitHub account to create the branch and pull request.</p></div></div>
         <input type="hidden" id="fork-repository" value="hammerdb-results">
-        <div class="submit-actions"><button type="button" class="action action-primary" id="continue-github">Continue to GitHub (manual PR) ↗</button></div>
-        <p class="field-note">Your result will be reviewed through a GitHub pull request. It appears on the leaderboard after approval.</p>
-        <p class="field-note"><strong>GitHub issue:</strong> GitHub's in-editor “Fork” button sometimes fails with HTTP 422. This form checks for an existing fork first; if needed, it opens GitHub's direct fork page instead.</p>
+        <div class="submit-actions"><button type="button" class="action action-primary" id="expert-pr">Prepare JSON and open GitHub ↗</button><button type="button" class="copy-button" id="continue-github">Use guided fork workflow</button></div>
+        <p class="field-note">GitHub experts: use your existing account to commit the prepared JSON on a new branch and open your own PR. You do not need a new fork if you have repository write access.</p>
+        <p class="field-note">If you need a fork, select <strong>Use guided fork workflow</strong>. That optional route preserves the tested GitHub HTTP 422 workaround.</p>
         <div id="fork-feedback" class="fork-feedback" role="status" aria-live="polite" hidden><strong id="fork-feedback-title"></strong><p id="fork-feedback-message"></p><div id="fork-create-guide" class="fork-create-guide" hidden><p id="fork-create-instructions"></p><p><strong>GitHub owner:</strong> <code id="fork-account"></code>. <strong>Repository name:</strong> <code id="required-fork-name"></code> <button type="button" id="copy-fork-name">Copy name</button></p><button type="button" class="action action-primary" id="open-fork-page">Copy name and open GitHub fork page ↗</button></div><a id="fork-feedback-link" href="#" target="_blank" rel="noopener noreferrer" hidden>Continue on GitHub</a></div>
         <div id="submission-progress" class="fork-feedback submission-progress" data-stage="idle" role="status" aria-live="polite" hidden><strong id="submission-progress-title"></strong><p id="submission-progress-detail"></p><div class="submit-actions"><button type="button" class="action action-primary" id="finish-pr">Open pull request ↗</button><a id="pr-link" class="action action-primary" href="#" target="_blank" rel="noopener noreferrer" hidden>Open pull request ↗</a></div></div>
         <details class="raw-preview"><summary>Result backup and troubleshooting</summary><div class="submit-actions"><button type="button" class="copy-button" id="copy-json">Copy JSON</button><button type="button" class="copy-button" id="download-json">Download JSON</button><button type="button" class="file-choose" id="clear-draft">Clear saved draft</button></div><p id="draft-status" class="draft-status">Your result and details are saved in this browser during GitHub setup.</p><pre id="generated-json">Select an artifact to preview.</pre></details>
@@ -717,6 +717,27 @@
     }
   }
 
+  async function continueExpertManually(){
+    let json;
+    try{json=buildSubmission();}
+    catch(error){showForkFeedback("Check submission details",error.message,"error");return;}
+    $("generated-json").textContent=json;
+    saveDraft();
+    // Reserve a GitHub tab during the click so pop-up blockers do not intervene.
+    // This expert route intentionally never creates, renames or selects forks.
+    const tab=window.open("about:blank","_blank");
+    if(tab)tab.opener=null;
+    const copied=await copyToClipboard(json);
+    const repoUrl="https://github.com/"+upstreamRepository;
+    if(tab)tab.location.replace(repoUrl);
+    if(!copied)document.querySelector(".raw-preview").open=true;
+    showForkFeedback("Ready for your own GitHub PR",
+      (copied?"Enriched JSON copied. ":"Clipboard unavailable: copy or download the JSON in Result backup below. ")+
+      "Sign in to GitHub, create a new branch, commit the JSON as "+resultPath+
+      ", then open a PR to "+upstreamRepository+". No extra fork is required if you have write access.",
+      copied?"success":"error",repoUrl,"Open GitHub repository");
+  }
+
   async function continueOnGitHub(){
     let json,forkName;
     try{json=buildSubmission();forkName=chosenForkName();}
@@ -863,6 +884,7 @@
     $("draft-status").textContent="Browser backup cleared. Your current form remains open.";
   });
   $("resume-draft").addEventListener("click",()=>{void restoreDraft();});
+  $("expert-pr").addEventListener("click",continueExpertManually);
   $("continue-github").addEventListener("click",continueOnGitHub);
   $("finish-pr").addEventListener("click",()=>refreshSubmission({openTab:true}));
   // Returning from the GitHub editor automatically updates the next step.
