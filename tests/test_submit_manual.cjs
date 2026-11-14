@@ -54,7 +54,8 @@ const sampleArtifact={
 async function mount({repoOwner="HammerDBLtd",login="ls250",mode="existing",
                      clipboard="working",popupBlocked=false,forkName="hammerdb-results",
                      initialStorage={},preloadArtifact=true,defaultBranch="main",
-                     initiallyCommitted=false,prOpen=false,prWrongAttribution=false}={}){
+                     initiallyCommitted=false,prOpen=false,prWrongAttribution=false,
+                     handoffJson=null}={}){
   const els=new Map(),requests=[],tabs=[],copied=[],events=[],downloads=[];
   const backingStorage=new Map(Object.entries(initialStorage));
   let committed=initiallyCommitted, openPr=prOpen;
@@ -105,7 +106,13 @@ async function mount({repoOwner="HammerDBLtd",login="ls250",mode="existing",
     removeItem(key){backingStorage.delete(key)}
   };
   const artifactUrl="https://example.org/sample-report.json";
-  const location={search:preloadArtifact?"?artifact_url="+encodeURIComponent(artifactUrl):""};
+  const handoffStorage=new Map(handoffJson?[["hammerdb-results-manual-handoff",handoffJson]]:[]);
+  const sessionStorage={
+    getItem(key){return handoffStorage.get(key)||null},
+    setItem(key,value){handoffStorage.set(key,String(value))},
+    removeItem(key){handoffStorage.delete(key)}
+  };
+  const location={search:handoffJson?"?handoff=1":preloadArtifact?"?artifact_url="+encodeURIComponent(artifactUrl):""};
   const fetch=async url=>{
     requests.push(String(url));
     if(url===artifactUrl) return {status:200,ok:true,text:async()=>JSON.stringify(sampleArtifact)};
@@ -165,13 +172,13 @@ async function mount({repoOwner="HammerDBLtd",login="ls250",mode="existing",
   $("fork-create-guide").hidden=true;
   $("fork-repository").value=forkName;
   vm.runInNewContext(script,{
-    document,window,navigator,localStorage,location,fetch,
+    document,window,navigator,localStorage,sessionStorage,location,fetch,
     URL,URLSearchParams,encodeURIComponent,console,Blob,setTimeout
   },{filename:"site/submit-manual.html"});
   for(let i=0;i<4;i++)await new Promise(setImmediate);
-  if(preloadArtifact){
+  if(preloadArtifact||handoffJson){
     assert.equal($("submit-section").hidden,false,"Test artifact should validate");
-    $("github-username").value=login;
+    if(preloadArtifact&&!handoffJson)$("github-username").value=login;
   }else{
     assert.equal($("submit-section").hidden,true,"A reload without artifact_url must start blank");
     assert.equal($("preview").hidden,true,"The prior result preview must not return automatically");
@@ -186,7 +193,7 @@ async function mount({repoOwner="HammerDBLtd",login="ls250",mode="existing",
     const handlers=$(id).events.get("input")||[];
     await Promise.all(handlers.map(fn=>fn()));
   }
-  return {$,click,input,requests,tabs,copied,events,repoUrl,backingStorage,downloads,
+  return {$,click,input,requests,tabs,copied,events,repoUrl,backingStorage,handoffStorage,downloads,
     commit(){committed=true},openPr(){openPr=true},
     async focus(){focusListeners.get("focus")?.();for(let i=0;i<4;i++)await new Promise(setImmediate)}
   };
@@ -656,4 +663,20 @@ test("when a user has many forks a matching HammerDB fork is still reused",async
   assert.match(p.tabs[0].navigated,
     /^https:\/\/github\.com\/ls250\/hammerdb-results-hammerdbltd\/new\/main\?filename=results%2F/);
   assert.doesNotMatch(p.tabs[0].navigated,/\/fork$/);
+});
+
+test("manual form resumes handoff from one-button page, preserving GitHub username",async()=>{
+  const saved=JSON.stringify({...sampleArtifact,submission:{
+    github_username:"sm-shaw",description:"Human-submitted test result",company:{
+      name:"HammerDB Ltd",logo_url:"",description:"Benchmarks"
+    }
+  }});
+  const p=await mount({preloadArtifact:false,handoffJson:saved,login:"sm-shaw",mode:"no-fork"});
+  assert.equal(p.$("submit-section").hidden,false);
+  assert.equal(p.$("github-username").value,"sm-shaw");
+  assert.equal(p.$("company-name").value,"HammerDB Ltd");
+  assert.equal(p.$("result-description").value,"Human-submitted test result");
+  assert.equal(p.handoffStorage.size,0,"One-time transfer must be removed");
+  assert.equal(p.$("result-path").textContent,"results/tproc-c/mariadb/2026/11/FAKEABC123.json");
+  assert.ok(p.backingStorage.has("hammerdb-results-submission-draft:hammerdbltd/hammerdb-results"));
 });
