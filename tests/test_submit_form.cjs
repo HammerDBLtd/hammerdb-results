@@ -32,7 +32,7 @@ const sample={
 async function mount({api="https://submissions.example.workers.dev",
   oauth="https://github.com/login/oauth/authorize?client_id=test&state=123",
   failService=false,preload=true}={}){
-  const elements=new Map(),requests=[],navigations=[],sessionValues=new Map();
+  const elements=new Map(),requests=[],navigations=[],sessionValues=new Map(),pageEvents=new Map();
   const get=id=>{
     if(!elements.has(id))elements.set(id,new Element(id));
     return elements.get(id);
@@ -49,6 +49,7 @@ async function mount({api="https://submissions.example.workers.dev",
   const window={
     HammerDBResultsRepo:{owner:"HammerDBLtd",repo:"hammerdb-results",branch:"main"},
     HammerDBSubmissionAPI:{endpoint:api},location:{assign(url){navigations.push(url)}},
+    addEventListener(name,callback){const list=pageEvents.get(name)||[];list.push(callback);pageEvents.set(name,list);},
     matchMedia(){return {matches:false,addEventListener(){}}}
   };
   const fetch=async(url,opts={})=>{
@@ -77,7 +78,9 @@ async function mount({api="https://submissions.example.workers.dev",
       await callback();
     await new Promise(setImmediate);
   }
-  return {get,requests,navigations,sessionValues,submit};
+  return {get,requests,navigations,sessionValues,submit,
+    pageShow(){for(const callback of pageEvents.get("pageshow")||[])callback();}
+  };
 }
 
 test("one submission form offers automatic PR and expert manual PR",()=>{
@@ -160,4 +163,31 @@ test("manual choice transfers enriched JSON to proven manual form without invoki
   assert.equal(result.submission.github_username,"sm-shaw");
   assert.equal(result.job.jobid,"FAKEABC123");
   assert.equal(result.result.nopm,800000);
+});
+
+test("returning from GitHub OAuth unlocks the button without losing validated details",async()=>{
+  const p=await mount();
+  await p.submit("ls250");
+  assert.equal(p.get("continue-github").disabled,true);
+  assert.equal(p.navigations.length,1);
+  p.pageShow();
+  assert.equal(p.get("continue-github").disabled,false);
+  assert.equal(p.get("submit-section").hidden,false);
+  assert.equal(p.get("github-username").value,"ls250");
+  p.get("pr-manual").checked=true;
+  for(const cb of p.get("pr-manual").events.get("change")||[])cb();
+  await p.submit("ls250");
+  assert.equal(p.get("continue-github").disabled,false);
+  assert.equal(p.navigations.at(-1),"submit-manual.html?handoff=1");
+  assert.equal(p.requests.filter(r=>r.url.endsWith("/submissions")).length,1);
+});
+
+test("switching from automatic to manual PR unlocks an OAuth-disabled button",async()=>{
+  const p=await mount();
+  await p.submit("ls250");
+  assert.equal(p.get("continue-github").disabled,true);
+  p.get("pr-manual").checked=true;
+  for(const cb of p.get("pr-manual").events.get("change")||[])cb();
+  assert.equal(p.get("continue-github").disabled,false);
+  assert.match(p.get("continue-github").textContent,/manual PR/);
 });
