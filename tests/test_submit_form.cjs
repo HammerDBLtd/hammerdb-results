@@ -139,8 +139,8 @@ test("normal refresh starts empty and does not load a saved JSON",async()=>{
   assert.doesNotMatch(script,/restoreDraft|localStorage\.setItem\(.*submission/);
 });
 
-test("the HammerDB Ltd test form points to the configured Worker without exposing credentials",()=>{
-  assert.match(config,/endpoint:\s*"https:\/\/hammerdb-results-submit-test\.hammerdb\.workers\.dev"/);
+test("the HammerDB Ltd form uses the clean branded Worker address without exposing credentials",()=>{
+  assert.match(config,/endpoint:\s*"https:\/\/hammerdb-results-submit\.hammerdb\.workers\.dev"/);
   assert.doesNotMatch(config,/ghp_|ghs_|BEGIN RSA PRIVATE KEY|client_secret\s*:/);
   assert.match(html,/submission-service-config\.js/);
 });
