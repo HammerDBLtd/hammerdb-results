@@ -55,6 +55,7 @@
     .submit-actions{display:flex;flex-wrap:wrap;gap:11px;margin-top:15px}
     .submit-actions button{border:0;cursor:pointer}
     .submit-actions button:disabled{opacity:.4;cursor:not-allowed}
+     .submit-actions[hidden]{display:none!important}
     .submit-actions .copy-button{padding:12px 17px;border:1px solid var(--border);border-radius:11px;background:var(--surface-raised);color:var(--text);font-weight:850}
     .help-panel{position:sticky;top:100px}
     .help-panel h3{font-size:18px;margin-bottom:10px}
@@ -107,7 +108,8 @@
           <label style="display:block;margin:8px 0"><input type="radio" id="pr-auto" name="pr-mode" value="auto" checked> <strong>Do it for me</strong> — Authorise GitHub access; HammerDB creates the PR automatically</label>
           <label style="display:block;margin:8px 0"><input type="radio" id="pr-manual" name="pr-mode" value="manual"> <strong>I'll create my own PR</strong> — Sign in to my GitHub account, authorise if prompted, and submit the PR myself</label>
         </fieldset>
-        <div class="submit-actions"><button type="button" class="action action-primary" id="continue-github">Submit result ↗</button></div>
+        <div class="submit-actions" id="auto-pr-actions"><button type="button" class="action action-primary" id="continue-github">Submit result ↗</button></div>
+        <div class="submit-actions" id="manual-pr-actions" hidden><button type="button" class="copy-button" id="copy-json">Copy enriched JSON</button><button type="button" class="action action-primary" id="manual-continue-github">Continue to GitHub ↗</button></div>
         <p class="field-note" id="pr-mode-description">One click submits your result for review. GitHub may ask you to sign in or authorize the HammerDB submission app once; then your pull request opens automatically.</p>
         <div class="safeguard">These are community-submitted, unaudited results. A workload badge describes declared configuration, not a measured finding of CPU or storage saturation.</div>
         <details class="raw-preview"><summary>Inspect the generated JSON</summary><pre id="generated-json">Select an artifact to preview.</pre></details>
@@ -335,14 +337,42 @@
     if (event.dataTransfer.files[0]) await loadArtifact(await event.dataTransfer.files[0].text());
   });
   fields.forEach((id) => $(id).addEventListener("input", updateGeneratedPreview));
+  // Manual PR behaviour is identical to the live TPC-Council form:
+  // copy enriched JSON, open GitHub's new-file editor, then commit and open PR.
+  async function copyJson() {
+    let json;
+    try { json = buildSubmission(); } catch (error) { status("Check submission details", error.message, "error"); return false; }
+    $("generated-json").textContent = json;
+    try {
+      await navigator.clipboard.writeText(json);
+      status("JSON copied", "Continue to GitHub, paste the enriched JSON into the new-file editor, commit and open your PR.", "success");
+      return true;
+    } catch (error) {
+      document.querySelector(".raw-preview").open = true;
+      status("Clipboard unavailable", "Copy the enriched JSON manually from the preview, then continue to GitHub.", "error");
+      return false;
+    }
+  }
+  $("copy-json").addEventListener("click", copyJson);
+  $("manual-continue-github").addEventListener("click", async () => {
+    let json;
+    try { json = buildSubmission(); } catch (error) { status("Check submission details", error.message, "error"); return; }
+    $("generated-json").textContent = json;
+    try { await navigator.clipboard.writeText(json); }
+    catch (error) { document.querySelector(".raw-preview").open = true; }
+    const url = "https://github.com/" + TARGET_OWNER + "/" + TARGET_REPO + "/new/" +
+      TARGET_BRANCH + "?filename=" + encodeURIComponent(resultPath);
+    window.open(url, "_blank", "noopener");
+    status("Continue on GitHub", "Paste the generated JSON into the editor and open a pull request using the GitHub account you declared.", "success");
+  });
   function updatePrMode(){
     // Switching PR routes must not inherit a disabled button from OAuth.
     $("continue-github").disabled = false;
     const manual=$("pr-manual").checked;
-    $("continue-github").textContent=manual
-      ? "Continue to GitHub (manual PR) ↗" : "Submit result ↗";
+    $("auto-pr-actions").hidden = manual;
+    $("manual-pr-actions").hidden = !manual;
     $("pr-mode-description").textContent=manual
-      ? "Sign in to your GitHub account and authorise if prompted. You will create the PR yourself, using the original tested manual route. Your JSON and details will carry over."
+      ? "Copy enriched JSON and continue to GitHub to commit it and open your own PR, exactly as on TPC-Council."
       : "One click submits your result for review. GitHub may ask you to sign in or authorize the HammerDB submission app once.";
   }
   // Browsers can restore a page from the back/forward cache after GitHub
@@ -356,18 +386,6 @@
     let json;
     try { json = buildSubmission(); } catch (error) {
       status("Check submission details", error.message, "error"); return;
-    }
-    if($("pr-manual").checked){
-      // Explicitly choosing manual mode does not invoke the submission service.
-      // Store the validated, enriched result only for the same-tab page transfer.
-      try{
-        sessionStorage.setItem("hammerdb-results-manual-handoff",json);
-        window.location.assign("submit-manual.html?handoff=1");
-      }catch(error){
-        status("Manual submission unavailable",
-          "Browser session storage is unavailable. Open the manual PR form and select your JSON file there.","error");
-      }
-      return;
     }
     const endpoint = String(window.HammerDBSubmissionAPI?.endpoint || "").replace(/[/]+$/, "");
     if (!endpoint) {
