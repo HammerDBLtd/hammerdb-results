@@ -177,9 +177,9 @@ async function oauthCallback(request,env,fetchImpl){
       method:"POST",body:JSON.stringify({
         title:"Submit "+artifact.job.benchmark+" "+artifact.job.database_display+
           " result "+artifact.job.jobid,
-        body:"Benchmark result submitted by authenticated GitHub user @"+user.login+
-          ".\\n\\nJob ID: "+artifact.job.jobid+"\\nResult file: "+path+
-          "\\n\\nCommunity-submitted, unaudited result. Review before merging.",
+        body:"HammerDB Ltd authenticated benchmark result submission.\n\n"+
+          "Job ID: "+artifact.job.jobid+"\nResult file: "+path+
+          "\n\nCommunity-submitted, unaudited result. Review before merging.",
         head:branch,base:"main",draft:false,maintainer_can_modify:true
       })
     });

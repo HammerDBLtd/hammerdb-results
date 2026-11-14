@@ -1,6 +1,6 @@
-# HammerDB Ltd test target. The production TPC-Council deployment must use
+# HammerDB Ltd submission service. The eventual TPC-Council deployment must use
 # separate GitHub App installation permissions and its own deployed endpoint.
-name = "hammerdb-oneclick-submission-test"
+name = "hammerdb-results-submit"
 main = "worker.mjs"
 compatibility_date = "2026-11-13"
 

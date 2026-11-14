@@ -100,6 +100,11 @@ test("GitHub auth generates same-repo result branch, content, and ready-to-revie
   assert.deepEqual(stored.result,artifact.result);
   assert.equal(p.requests.some(r=>r.url.includes("/forks")),false,"Never ask a user to fork");
   assert.equal(p.requests.filter(r=>r.method==="POST"&&r.url.endsWith("/pulls")).length,1);
+  const submittedPR=JSON.parse(p.requests.find(r=>r.method==="POST"&&r.url.endsWith("/pulls")).body);
+  assert.match(submittedPR.body,/^HammerDB Ltd authenticated benchmark result submission\./);
+  assert.ok(submittedPR.body.includes("\n\nJob ID: FAKEABC123\nResult file: "));
+  assert.equal(submittedPR.body.includes("\\n"),false,"PR description must use real newlines");
+  assert.equal(submittedPR.body.includes("@ls250"),false,"Verified contributor belongs in JSON, not PR heading");
   assert.equal(p.saved.size,0,"Pending submission must not persist after successful PR");
 });
 

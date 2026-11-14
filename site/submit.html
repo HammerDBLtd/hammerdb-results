@@ -101,9 +101,14 @@
         <div class="field"><label for="workload-details">Evidence / configuration settings</label><textarea id="workload-details" maxlength="1200" rows="5" placeholder="Describe settings such as use all warehouses, innodb_flush_log_at_trx_commit, sync_binlog, synchronous_commit, SQL Server durability, log I/O and buffer sizes."></textarea><div class="field-note">Required (20 characters minimum) for a CPU- or I/O-intensive badge. Can be based on a manual run; no pipeline required.</div></div>
         <div id="workload-help" class="declare-note">Older results lacking UAW and durability data remain unclassified. IOPS / MB/s by themselves do not prove a bottleneck.</div>
       </section>
-      <section class="submit-panel" id="submit-section" hidden><div class="panel-title"><span class="step-index">4</span><div><h2>Submit result</h2><p>Your result will become a GitHub pull request for review. No forks or manual JSON copying.</p></div></div>
+      <section class="submit-panel" id="submit-section" hidden><div class="panel-title"><span class="step-index">4</span><div><h2>Submit result</h2><p>Choose whether HammerDB creates the pull request with your GitHub authorisation or you create it yourself.</p></div></div>
+        <fieldset class="pr-choice" style="padding:14px 17px;border:1px solid var(--border);border-radius:11px">
+          <legend><strong>Pull request — how would you like to submit?</strong></legend>
+          <label style="display:block;margin:8px 0"><input type="radio" id="pr-auto" name="pr-mode" value="auto" checked> <strong>Do it for me</strong> — Authorise GitHub access; HammerDB creates the PR automatically</label>
+          <label style="display:block;margin:8px 0"><input type="radio" id="pr-manual" name="pr-mode" value="manual"> <strong>I'll create my own PR</strong> — Sign in to my GitHub account, authorise if prompted, and submit the PR myself</label>
+        </fieldset>
         <div class="submit-actions"><button type="button" class="action action-primary" id="continue-github">Submit result ↗</button></div>
-        <p class="field-note">One click submits your result for review. GitHub may ask you to sign in or authorize the submission app once; then your pull request opens automatically.</p>
+        <p class="field-note" id="pr-mode-description">One click submits your result for review. GitHub may ask you to sign in or authorize the HammerDB submission app once; then your pull request opens automatically.</p>
         <div class="safeguard">These are community-submitted, unaudited results. A workload badge describes declared configuration, not a measured finding of CPU or storage saturation.</div>
         <details class="raw-preview"><summary>Inspect the generated JSON</summary><pre id="generated-json">Select an artifact to preview.</pre></details>
       </section>
@@ -114,7 +119,7 @@
       <li><strong>Declare workload intent.</strong> For TPROC-C, record UAW and durability settings or leave it unclassified.</li>
       <li><strong>Submit.</strong> Click Submit result and review your GitHub pull request.</li></ol>
       <div class="help-divider"></div>
-      <p><strong>Important:</strong> Submission target: <a data-repository-link href="https://github.com/HammerDBLtd/hammerdb-results"><span data-repository-name>Loading repository…</span></a>. On TPC-Council Pages, contributors propose changes by PR to TPC-Council. This form does not write files directly.</p>
+      <p><strong>Important:</strong> Submission target: <a data-repository-link href="https://github.com/HammerDBLtd/hammerdb-results"><span data-repository-name>Loading repository…</span></a>. Automatic submissions create PRs through the authorised HammerDB GitHub App; manual submissions use your GitHub account. A maintainer approves and merges either PR.</p>
       <p>UAW increases data-area I/O, but performance graphs alone cannot establish the workload category. <a href="https://www.hammerdb.com/docs/ch04s08.html" target="_blank" rel="noopener noreferrer">HammerDB UAW documentation</a>.</p>
     </aside>
   </div>
@@ -327,10 +332,32 @@
     if (event.dataTransfer.files[0]) await loadArtifact(await event.dataTransfer.files[0].text());
   });
   fields.forEach((id) => $(id).addEventListener("input", updateGeneratedPreview));
+  function updatePrMode(){
+    const manual=$("pr-manual").checked;
+    $("continue-github").textContent=manual
+      ? "Continue to GitHub (manual PR) ↗" : "Submit result ↗";
+    $("pr-mode-description").textContent=manual
+      ? "Sign in to your GitHub account and authorise if prompted. You will create the PR yourself, using the original tested manual route. Your JSON and details will carry over."
+      : "One click submits your result for review. GitHub may ask you to sign in or authorize the HammerDB submission app once.";
+  }
+  $("pr-auto").addEventListener("change",updatePrMode);
+  $("pr-manual").addEventListener("change",updatePrMode);
   $("continue-github").addEventListener("click", async () => {
     let json;
     try { json = buildSubmission(); } catch (error) {
       status("Check submission details", error.message, "error"); return;
+    }
+    if($("pr-manual").checked){
+      // Explicitly choosing manual mode does not invoke the submission service.
+      // Store the validated, enriched result only for the same-tab page transfer.
+      try{
+        sessionStorage.setItem("hammerdb-results-manual-handoff",json);
+        window.location.assign("submit-manual.html?handoff=1");
+      }catch(error){
+        status("Manual submission unavailable",
+          "Browser session storage is unavailable. Open the manual PR form and select your JSON file there.","error");
+      }
+      return;
     }
     const endpoint = String(window.HammerDBSubmissionAPI?.endpoint || "").replace(/[/]+$/, "");
     if (!endpoint) {

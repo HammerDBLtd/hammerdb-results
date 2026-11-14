@@ -32,7 +32,7 @@ const sample={
 async function mount({api="https://submissions.example.workers.dev",
   oauth="https://github.com/login/oauth/authorize?client_id=test&state=123",
   failService=false,preload=true}={}){
-  const elements=new Map(),requests=[],navigations=[];
+  const elements=new Map(),requests=[],navigations=[],sessionValues=new Map();
   const get=id=>{
     if(!elements.has(id))elements.set(id,new Element(id));
     return elements.get(id);
@@ -62,8 +62,13 @@ async function mount({api="https://submissions.example.workers.dev",
     throw Error("Unexpected request "+value);
   };
   const localStorage={getItem(){return null},setItem(){},removeItem(){}};
+  const sessionStorage={
+    getItem(key){return sessionValues.get(key)||null},
+    setItem(key,value){sessionValues.set(key,String(value))},
+    removeItem(key){sessionValues.delete(key)}
+  };
   vm.runInNewContext(script,{document,window,location,URL,URLSearchParams,
-    fetch,localStorage,console,encodeURIComponent,setTimeout},
+    fetch,localStorage,sessionStorage,console,encodeURIComponent,setTimeout},
     {filename:"site/submit.html"});
   for(let i=0;i<5;i++)await new Promise(setImmediate);
   async function submit(login="ls250"){
@@ -72,11 +77,14 @@ async function mount({api="https://submissions.example.workers.dev",
       await callback();
     await new Promise(setImmediate);
   }
-  return {get,requests,navigations,submit};
+  return {get,requests,navigations,sessionValues,submit};
 }
 
-test("one visible Submit result action; no fork or JSON copy wizard",()=>{
+test("one submission form offers automatic PR and expert manual PR",()=>{
   assert.match(html,/id="continue-github">Submit result/);
+  assert.match(html,/id="pr-auto"[^>]*checked/);
+  assert.match(html,/id="pr-manual"/);
+  assert.match(html,/I'll create my own PR/);
   assert.doesNotMatch(html,/id="copy-json"|id="fork-repository"|id="open-fork-page"/);
   assert.doesNotMatch(script,/github\.com\/.*\/fork|\/new\/main|copyToClipboard|navigator\.clipboard/);
   assert.match(html,/Select your result artifact/);
@@ -131,8 +139,25 @@ test("normal refresh starts empty and does not load a saved JSON",async()=>{
   assert.doesNotMatch(script,/restoreDraft|localStorage\.setItem\(.*submission/);
 });
 
-test("the HammerDB Ltd test form points to the configured Worker without exposing credentials",()=>{
-  assert.match(config,/endpoint:\s*"https:\/\/hammerdb-results-submit-test\.steve-shaw\.workers\.dev"/);
+test("the HammerDB Ltd form uses the clean branded Worker address without exposing credentials",()=>{
+  assert.match(config,/endpoint:\s*"https:\/\/hammerdb-results-submit\.hammerdb\.workers\.dev"/);
   assert.doesNotMatch(config,/ghp_|ghs_|BEGIN RSA PRIVATE KEY|client_secret\s*:/);
   assert.match(html,/submission-service-config\.js/);
+});
+
+test("manual choice transfers enriched JSON to proven manual form without invoking service",async()=>{
+  const p=await mount();
+  p.get("pr-manual").checked=true;
+  p.get("pr-auto").checked=false;
+  for(const change of p.get("pr-manual").events.get("change")||[])change();
+  assert.match(p.get("continue-github").textContent,/manual PR/);
+  await p.submit("sm-shaw");
+  assert.equal(p.requests.some(r=>r.url.endsWith("/submissions")),false);
+  assert.deepEqual(p.navigations,["submit-manual.html?handoff=1"]);
+  const handoff=p.sessionValues.get("hammerdb-results-manual-handoff");
+  assert.ok(handoff,"The result must be retained for manual routing");
+  const result=JSON.parse(handoff);
+  assert.equal(result.submission.github_username,"sm-shaw");
+  assert.equal(result.job.jobid,"FAKEABC123");
+  assert.equal(result.result.nopm,800000);
 });
