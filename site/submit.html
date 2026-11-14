@@ -99,7 +99,7 @@
           <div class="field"><label for="durability-setting">Database durability configuration</label><select id="durability-setting"><option value="unknown">Not recorded</option><option value="full">Full / synchronous durability</option><option value="relaxed">Relaxed / asynchronous commit</option></select><div class="field-note">Database transaction-log and commit behaviour, not inferred from storage telemetry.</div></div>
         </div>
         <div class="field"><label for="workload-details">Evidence / configuration settings</label><textarea id="workload-details" maxlength="1200" rows="5" placeholder="Describe settings such as use all warehouses, innodb_flush_log_at_trx_commit, sync_binlog, synchronous_commit, SQL Server durability, log I/O and buffer sizes."></textarea><div class="field-note">Required (20 characters minimum) for a CPU- or I/O-intensive badge. Can be based on a manual run; no pipeline required.</div></div>
-        <div id="workload-help" class="declare-note">Older results lacking UAW and durability data remain unclassified. IOPS / MB/s by themselves do not prove a bottleneck.</div>
+        <div id="workload-help" class="declare-note">Older results lacking UAW and durability data remain unclassified.</div>
       </section>
       <section class="submit-panel" id="submit-section" hidden><div class="panel-title"><span class="step-index">4</span><div><h2>Submit result</h2><p>Choose whether HammerDB creates the pull request with your GitHub authorisation or you create it yourself.</p></div></div>
         <fieldset class="pr-choice" style="padding:14px 17px;border:1px solid var(--border);border-radius:11px">
