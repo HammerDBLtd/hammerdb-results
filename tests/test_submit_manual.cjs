@@ -458,7 +458,7 @@ test("prepared submission JSON preserves benchmark evidence and submits correct 
 test("the controller cannot open GitHub's failing new-file editor in the original repository",()=>{
   assert.match(script,/resolveFork\(login,forkName\)/);
   assert.doesNotMatch(script,/const url = "https:\/\/github\.com\/" \+ TARGET_OWNER \+ "\/" \+ TARGET_REPO \+ "\/new\/"/);
-  assert.ok(html.includes('id="continue-github">Continue to GitHub (manual PR)'));
+  assert.ok(html.includes('id="continue-github">Use guided fork workflow'));
   assert.ok(html.includes("GitHub issue:"));
   assert.ok(!html.includes('id="fork-options"'));
   assert.ok(!html.includes("direct-fork-link"));
@@ -631,7 +631,7 @@ test("no second fork is suggested if GitHub cannot verify the user's existing fo
 
 test("expert manual form keeps primary GitHub continuation button and hides technical backup tools",()=>{
   const submission=html.slice(html.indexOf('id="submit-section"'),html.indexOf('</section>',html.indexOf('id="submit-section"')));
-  assert.ok(submission.includes('id="continue-github">Continue to GitHub (manual PR)'),"Manual route must retain its primary button");
+  assert.ok(submission.includes('id="continue-github">Use guided fork workflow'),"Original guided fork route remains available when needed");
   assert.match(submission,/<details class="raw-preview"><summary>Result backup and troubleshooting/);
   assert.ok(!submission.includes('id="fork-options"'));
   assert.ok(!submission.includes("GitHub fork repository name"));
@@ -679,4 +679,29 @@ test("manual form resumes handoff from one-button page, preserving GitHub userna
   assert.equal(p.handoffStorage.size,0,"One-time transfer must be removed");
   assert.equal(p.$("result-path").textContent,"results/tproc-c/mariadb/2026/11/FAKEABC123.json");
   assert.ok(p.backingStorage.has("hammerdb-results-submission-draft:hammerdbltd/hammerdb-results"));
+});
+
+test("GitHub expert can prepare their own PR without creating or checking forks",async()=>{
+  const p=await mount({repoOwner:"HammerDBLtd",login:"sm-shaw",mode:"collision-alt-ready"});
+  await p.click("expert-pr");
+  assert.equal(p.tabs.length,1);
+  assert.equal(p.tabs[0].navigated,"https://github.com/HammerDBLtd/hammerdb-results");
+  assert.equal(p.requests.some(url=>url.includes("api.github.com/users/") ||
+    url.includes("api.github.com/repos/sm-shaw/")),false,
+    "Expert route must never check, choose or demand a second fork");
+  assert.equal(p.$("fork-create-guide").hidden,true);
+  assert.match(p.$("fork-feedback-title").textContent,/Ready for your own GitHub PR/);
+  assert.match(p.$("fork-feedback-message").textContent,/create a new branch/);
+  assert.match(p.$("fork-feedback-message").textContent,/No extra fork is required/);
+  const copied=JSON.parse(p.copied[0]);
+  assert.equal(copied.submission.github_username,"sm-shaw");
+  assert.equal(copied.job.jobid,"FAKEABC123");
+});
+
+test("expert route offers JSON backup and GitHub link if clipboard is blocked",async()=>{
+  const p=await mount({login:"sm-shaw",clipboard:"all-denied"});
+  await p.click("expert-pr");
+  assert.match(p.$("fork-feedback-message").textContent,/Clipboard unavailable/);
+  assert.equal(p.$("fork-feedback-link").href,"https://github.com/HammerDBLtd/hammerdb-results");
+  assert.equal(p.$("raw-preview").open,true);
 });
