@@ -459,7 +459,7 @@ test("the controller cannot open GitHub's failing new-file editor in the origina
   assert.match(script,/resolveFork\(login,forkName\)/);
   assert.doesNotMatch(script,/const url = "https:\/\/github\.com\/" \+ TARGET_OWNER \+ "\/" \+ TARGET_REPO \+ "\/new\/"/);
   assert.ok(html.includes('id="continue-github">Use guided fork workflow'));
-  assert.ok(html.includes("GitHub issue:"));
+  assert.ok(html.includes("GitHub HTTP 422 workaround"));
   assert.ok(!html.includes('id="fork-options"'));
   assert.ok(!html.includes("direct-fork-link"));
 });
