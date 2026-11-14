@@ -131,8 +131,8 @@ test("normal refresh starts empty and does not load a saved JSON",async()=>{
   assert.doesNotMatch(script,/restoreDraft|localStorage\.setItem\(.*submission/);
 });
 
-test("no credentials or GitHub tokens appear in the published config",()=>{
-  assert.match(config,/endpoint:\s*""/);
+test("the HammerDB Ltd test form points to the configured Worker without exposing credentials",()=>{
+  assert.match(config,/endpoint:\s*"https:\/\/hammerdb-results-submit-test\.steve-shaw\.workers\.dev"/);
   assert.doesNotMatch(config,/ghp_|ghs_|BEGIN RSA PRIVATE KEY|client_secret\s*:/);
   assert.match(html,/submission-service-config\.js/);
 });
