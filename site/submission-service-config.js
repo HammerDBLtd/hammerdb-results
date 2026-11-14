@@ -3,5 +3,5 @@
  * test branch, and separately when promoting the tested service to TPC Council.
  */
 window.HammerDBSubmissionAPI = Object.freeze({
-  endpoint: ""
+  endpoint: "https://hammerdb-results-submit-test.steve-shaw.workers.dev"
 });
