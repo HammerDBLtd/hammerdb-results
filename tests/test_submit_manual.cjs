@@ -631,7 +631,7 @@ test("no second fork is suggested if GitHub cannot verify the user's existing fo
 
 test("expert manual form keeps primary GitHub continuation button and hides technical backup tools",()=>{
   const submission=html.slice(html.indexOf('id="submit-section"'),html.indexOf('</section>',html.indexOf('id="submit-section"')));
-  assert.match(submission,/id="continue-github">Continue to GitHub (manual PR)/);
+  assert.ok(submission.includes('id="continue-github">Continue to GitHub (manual PR)'),"Manual route must retain its primary button");
   assert.match(submission,/<details class="raw-preview"><summary>Result backup and troubleshooting/);
   assert.ok(!submission.includes('id="fork-options"'));
   assert.ok(!submission.includes("GitHub fork repository name"));
