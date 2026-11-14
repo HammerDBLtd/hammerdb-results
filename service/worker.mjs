@@ -175,7 +175,7 @@ async function oauthCallback(request,env,fetchImpl){
     });
     const prs=await gh(fetchImpl,API_ROOT+repo+"/pulls",token,{
       method:"POST",body:JSON.stringify({
-        title:"Submit "+artifact.job.benchmark+" "+artifact.job.database_display+
+        title:"HammerDB Ltd: "+artifact.job.benchmark+" "+artifact.job.database_display+
           " result "+artifact.job.jobid,
         body:"HammerDB Ltd authenticated benchmark result submission.\n\n"+
           "Job ID: "+artifact.job.jobid+"\nResult file: "+path+
