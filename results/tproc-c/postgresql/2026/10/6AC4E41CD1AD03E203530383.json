@@ -1,0 +1,1111 @@
+{
+  "schema": "hammerdb-job-report-v1",
+  "description": "HammerDB benchmark result artifact. Machine-readable data, report_hints and analysis_hints are included for reproducible reporting, summary tables and chart generation.",
+  "artifact": {
+    "type": "hammerdb-result-json",
+    "schema": "hammerdb-job-report-v1",
+    "source": "HammerDB",
+    "generated_by": "HammerDB jobs summaryjson",
+    "visibility": "public",
+    "redacted": true
+  },
+  "disclaimer": {
+    "result_type": "HammerDB result artifact",
+    "audited": false,
+    "text": "This is a HammerDB result artifact. HammerDB TPROC-C and TPROC-H workloads are derived from the TPC-C and TPC-H specifications respectively. This result is not audited by the TPC-Council and is not a TPC result.",
+    "tpc_trademarks": "TPC-C, tpmC, TPC-H and QphH are trademarks of the Transaction Processing Performance Council. Unauthorised and unaudited use of official TPC result trademarks is not permitted.",
+    "hammerdb_copyright": "HammerDB is open source software distributed under the GNU General Public License (GPL). HammerDB source code, TPROC-C and TPROC-H workload implementations, documentation and related materials are copyright HammerDB Ltd. NOPM, TPROC-C and TPROC-H are HammerDB benchmark terminology.",
+    "learn_more_tpc": "https://www.tpc.org/",
+    "learn_more_hammerdb": "https://www.hammerdb.com/"
+  },
+  "report_hints": {
+    "title": "PostgreSQL TPROC-C Benchmark Report",
+    "intended_use": "Use this JSON to generate benchmark reports, summary tables, charts and public result artifact pages.",
+    "primary_result_metrics": [
+      "NOPM",
+      "TPM"
+    ],
+    "recommended_charts": [
+      {
+        "title": "PostgreSQL TPROC-C Result",
+        "chart_type": "bar",
+        "data_path": "result.chart_data",
+        "x": "metric",
+        "y": "value"
+      },
+      {
+        "title": "PostgreSQL TPROC-C Transaction Count",
+        "chart_type": "line",
+        "data_path": "transaction_count.series[].points",
+        "x": "timestamp",
+        "y": "value"
+      },
+      {
+        "title": "PostgreSQL TPROC-C Response Times",
+        "chart_type": "boxplot",
+        "data_path": "response_times.rows",
+        "category": "name",
+        "values": [
+          "p25_ms",
+          "p50_ms",
+          "p75_ms",
+          "p95_ms",
+          "p99_ms"
+        ]
+      },
+      {
+        "title": "PostgreSQL CPU %",
+        "chart_type": "line",
+        "data_path": "metrics.cpu_percent",
+        "x": "timestamp",
+        "y_series": [
+          "usr_pct",
+          "sys_pct",
+          "irq_pct",
+          "idle_pct"
+        ]
+      },
+      {
+        "title": "PostgreSQL IOPS",
+        "chart_type": "line",
+        "data_path": "metrics.iops",
+        "x": "timestamp",
+        "y": "value"
+      },
+      {
+        "title": "PostgreSQL MB/s",
+        "chart_type": "line",
+        "data_path": "metrics.mbps",
+        "x": "timestamp",
+        "y": "value"
+      }
+    ],
+    "notes": [
+      "For TPROC-C, final low transaction_count values may be the end-of-test shutdown tail rather than steady-state throughput.",
+      "Use database_display for human-readable report headings and database for HammerDB internal identifiers."
+    ]
+  },
+  "analysis_hints": {
+    "active_window": {
+      "available": true,
+      "start": "2026-10-06 13:05:59",
+      "end": "2026-10-06 13:13:05",
+      "method": "First to last transaction_count value above shutdown-tail threshold.",
+      "transaction_count_min_active_value": 1000,
+      "recommended_filter": "For charts and narrative summaries, filter transaction_count, CPU, IOPS and MB/s to this active_window."
+    },
+    "shutdown_tail": {
+      "present": true,
+      "threshold": 1000,
+      "note": "Repeated low transaction_count, IOPS and MB/s values after active_window.end are usually the end-of-test shutdown tail and should normally be excluded from charts and summaries."
+    }
+  },
+  "job": {
+    "jobid": "6AC4E41CD1AD03E203530383",
+    "hdb_version": "v6.1.1",
+    "database": "PostgreSQL",
+    "database_display": "PostgreSQL",
+    "release": "18.6",
+    "benchmark": "TPROC-C",
+    "timestamp": "2026-10-06 13:05:48"
+  },
+  "benchmark_config": {
+    "warehouses": 192,
+    "virtual_users": 24,
+    "rampup_minutes": 2,
+    "duration_minutes": 5
+  },
+  "system": {
+    "available": true,
+    "hostname": "localhost",
+    "cpumodel": "Intel(R) Core(TM) i9-14900KS",
+    "cpucount": "24",
+    "system_vendor": "innotek GmbH",
+    "system_type": "VirtualBox",
+    "os_name": "Ubuntu 24.04.1 LTS",
+    "memory": "31.3 GB",
+    "nic": "docker0 (Unknown); enp0s3 (1 Gbps)",
+    "storage": "VBOX HARDDISK (80 GB); VBOX HARDDISK (100 GB)",
+    "cloud_instance": "Not Detected"
+  },
+  "result": {
+    "type": "tproc_c_result",
+    "database_display": "PostgreSQL",
+    "active_virtual_users": 24,
+    "nopm": 63178,
+    "tpm": 147538,
+    "chart_data": [
+      {
+        "metric": "NOPM",
+        "value": 63178
+      },
+      {
+        "metric": "TPM",
+        "value": 147538
+      }
+    ]
+  },
+  "transaction_count": {
+    "available": true,
+    "series": [
+      {
+        "name": "PostgreSQL tpm",
+        "database": "PostgreSQL",
+        "database_display": "PostgreSQL",
+        "metric": "tpm",
+        "points": [
+          {
+            "timestamp": "2026-10-06 13:05:48",
+            "value": 0
+          },
+          {
+            "timestamp": "2026-10-06 13:05:59",
+            "value": 92232
+          },
+          {
+            "timestamp": "2026-10-06 13:06:09",
+            "value": 52458
+          },
+          {
+            "timestamp": "2026-10-06 13:06:21",
+            "value": 91140
+          },
+          {
+            "timestamp": "2026-10-06 13:06:29",
+            "value": 93150
+          },
+          {
+            "timestamp": "2026-10-06 13:06:39",
+            "value": 105270
+          },
+          {
+            "timestamp": "2026-10-06 13:06:49",
+            "value": 125484
+          },
+          {
+            "timestamp": "2026-10-06 13:06:59",
+            "value": 130164
+          },
+          {
+            "timestamp": "2026-10-06 13:07:09",
+            "value": 120300
+          },
+          {
+            "timestamp": "2026-10-06 13:07:19",
+            "value": 135468
+          },
+          {
+            "timestamp": "2026-10-06 13:07:29",
+            "value": 126660
+          },
+          {
+            "timestamp": "2026-10-06 13:07:39",
+            "value": 102960
+          },
+          {
+            "timestamp": "2026-10-06 13:07:50",
+            "value": 170646
+          },
+          {
+            "timestamp": "2026-10-06 13:08:00",
+            "value": 143130
+          },
+          {
+            "timestamp": "2026-10-06 13:08:10",
+            "value": 149202
+          },
+          {
+            "timestamp": "2026-10-06 13:08:20",
+            "value": 142368
+          },
+          {
+            "timestamp": "2026-10-06 13:08:30",
+            "value": 157302
+          },
+          {
+            "timestamp": "2026-10-06 13:08:40",
+            "value": 127752
+          },
+          {
+            "timestamp": "2026-10-06 13:08:50",
+            "value": 145458
+          },
+          {
+            "timestamp": "2026-10-06 13:09:00",
+            "value": 180060
+          },
+          {
+            "timestamp": "2026-10-06 13:09:10",
+            "value": 151302
+          },
+          {
+            "timestamp": "2026-10-06 13:09:20",
+            "value": 137382
+          },
+          {
+            "timestamp": "2026-10-06 13:09:30",
+            "value": 154692
+          },
+          {
+            "timestamp": "2026-10-06 13:09:40",
+            "value": 117516
+          },
+          {
+            "timestamp": "2026-10-06 13:09:50",
+            "value": 114186
+          },
+          {
+            "timestamp": "2026-10-06 13:10:00",
+            "value": 99810
+          },
+          {
+            "timestamp": "2026-10-06 13:10:10",
+            "value": 110178
+          },
+          {
+            "timestamp": "2026-10-06 13:10:21",
+            "value": 137016
+          },
+          {
+            "timestamp": "2026-10-06 13:10:31",
+            "value": 132510
+          },
+          {
+            "timestamp": "2026-10-06 13:10:41",
+            "value": 120534
+          },
+          {
+            "timestamp": "2026-10-06 13:10:51",
+            "value": 150282
+          },
+          {
+            "timestamp": "2026-10-06 13:11:01",
+            "value": 166554
+          },
+          {
+            "timestamp": "2026-10-06 13:11:11",
+            "value": 180132
+          },
+          {
+            "timestamp": "2026-10-06 13:11:21",
+            "value": 164430
+          },
+          {
+            "timestamp": "2026-10-06 13:11:31",
+            "value": 188922
+          },
+          {
+            "timestamp": "2026-10-06 13:11:41",
+            "value": 161196
+          },
+          {
+            "timestamp": "2026-10-06 13:11:51",
+            "value": 167550
+          },
+          {
+            "timestamp": "2026-10-06 13:12:01",
+            "value": 150870
+          },
+          {
+            "timestamp": "2026-10-06 13:12:11",
+            "value": 150348
+          },
+          {
+            "timestamp": "2026-10-06 13:12:21",
+            "value": 151446
+          },
+          {
+            "timestamp": "2026-10-06 13:12:31",
+            "value": 160428
+          },
+          {
+            "timestamp": "2026-10-06 13:12:42",
+            "value": 151656
+          },
+          {
+            "timestamp": "2026-10-06 13:12:52",
+            "value": 143616
+          },
+          {
+            "timestamp": "2026-10-06 13:13:05",
+            "value": 51936
+          },
+          {
+            "timestamp": "2026-10-06 13:13:16",
+            "value": 678
+          }
+        ]
+      }
+    ]
+  },
+  "response_times": {
+    "type": "boxplot",
+    "unit": "milliseconds",
+    "rows": [
+      {
+        "name": "NEWORD",
+        "elapsed_ms": 415061.5,
+        "calls": 418187,
+        "min_ms": 0.121,
+        "avg_ms": 10.966,
+        "max_ms": 2299.922,
+        "total_ms": 4585926.076,
+        "p99_ms": 72.647,
+        "p95_ms": 35.931,
+        "p75_ms": 14.819,
+        "p50_ms": 4.677,
+        "p25_ms": 0.389,
+        "sd": 17.23,
+        "ratio_pct": 46.037
+      },
+      {
+        "name": "PAYMENT",
+        "elapsed_ms": 415061.5,
+        "calls": 418536,
+        "min_ms": 0.077,
+        "avg_ms": 8.721,
+        "max_ms": 1341.769,
+        "total_ms": 3649978.059,
+        "p99_ms": 54.05,
+        "p95_ms": 30.345,
+        "p75_ms": 13.401,
+        "p50_ms": 2.742,
+        "p25_ms": 0.173,
+        "sd": 12.466,
+        "ratio_pct": 36.641
+      },
+      {
+        "name": "DELIVERY",
+        "elapsed_ms": 415061.5,
+        "calls": 42023,
+        "min_ms": 0.426,
+        "avg_ms": 14.444,
+        "max_ms": 474.647,
+        "total_ms": 606992.97,
+        "p99_ms": 97.897,
+        "p95_ms": 44.738,
+        "p75_ms": 18.549,
+        "p50_ms": 8.532,
+        "p25_ms": 3.08,
+        "sd": 19.293,
+        "ratio_pct": 6.093
+      },
+      {
+        "name": "SLEV",
+        "elapsed_ms": 415061.5,
+        "calls": 41851,
+        "min_ms": 0.287,
+        "avg_ms": 14.601,
+        "max_ms": 3118.304,
+        "total_ms": 611081.165,
+        "p99_ms": 62.314,
+        "p95_ms": 39.044,
+        "p75_ms": 20.357,
+        "p50_ms": 10.108,
+        "p25_ms": 5.314,
+        "sd": 16.064,
+        "ratio_pct": 6.134
+      },
+      {
+        "name": "OSTAT",
+        "elapsed_ms": 415061.5,
+        "calls": 42083,
+        "min_ms": 0.046,
+        "avg_ms": 6.83,
+        "max_ms": 361.114,
+        "total_ms": 287413.134,
+        "p99_ms": 37.565,
+        "p95_ms": 24.758,
+        "p75_ms": 11.767,
+        "p50_ms": 2.376,
+        "p25_ms": 0.127,
+        "sd": 9.766,
+        "ratio_pct": 2.885
+      }
+    ]
+  },
+  "metrics": {
+    "available": true,
+    "cpu_percent": [
+      {
+        "timestamp": "2026-10-06 13:06:05",
+        "usr_pct": 6.54,
+        "sys_pct": 9.38,
+        "irq_pct": 0,
+        "idle_pct": 51.12
+      },
+      {
+        "timestamp": "2026-10-06 13:06:18",
+        "usr_pct": 9.94,
+        "sys_pct": 12.18,
+        "irq_pct": 0,
+        "idle_pct": 37.68
+      },
+      {
+        "timestamp": "2026-10-06 13:06:25",
+        "usr_pct": 11.32,
+        "sys_pct": 11.88,
+        "irq_pct": 0,
+        "idle_pct": 39.5
+      },
+      {
+        "timestamp": "2026-10-06 13:06:35",
+        "usr_pct": 10.91,
+        "sys_pct": 14.87,
+        "irq_pct": 0,
+        "idle_pct": 40.45
+      },
+      {
+        "timestamp": "2026-10-06 13:06:45",
+        "usr_pct": 12.85,
+        "sys_pct": 14.5,
+        "irq_pct": 0,
+        "idle_pct": 38.07
+      },
+      {
+        "timestamp": "2026-10-06 13:06:55",
+        "usr_pct": 13.49,
+        "sys_pct": 12.37,
+        "irq_pct": 0,
+        "idle_pct": 37.85
+      },
+      {
+        "timestamp": "2026-10-06 13:07:05",
+        "usr_pct": 11.99,
+        "sys_pct": 11.88,
+        "irq_pct": 0,
+        "idle_pct": 41
+      },
+      {
+        "timestamp": "2026-10-06 13:07:15",
+        "usr_pct": 11.99,
+        "sys_pct": 12.56,
+        "irq_pct": 0,
+        "idle_pct": 39.12
+      },
+      {
+        "timestamp": "2026-10-06 13:07:25",
+        "usr_pct": 14.64,
+        "sys_pct": 12.24,
+        "irq_pct": 0,
+        "idle_pct": 38.04
+      },
+      {
+        "timestamp": "2026-10-06 13:07:35",
+        "usr_pct": 10.3,
+        "sys_pct": 11.94,
+        "irq_pct": 0,
+        "idle_pct": 44.9
+      },
+      {
+        "timestamp": "2026-10-06 13:07:45",
+        "usr_pct": 13.66,
+        "sys_pct": 12.06,
+        "irq_pct": 0,
+        "idle_pct": 39.38
+      },
+      {
+        "timestamp": "2026-10-06 13:07:55",
+        "usr_pct": 14.55,
+        "sys_pct": 12.4,
+        "irq_pct": 0,
+        "idle_pct": 36.99
+      },
+      {
+        "timestamp": "2026-10-06 13:08:05",
+        "usr_pct": 14.21,
+        "sys_pct": 12.38,
+        "irq_pct": 0,
+        "idle_pct": 36.76
+      },
+      {
+        "timestamp": "2026-10-06 13:08:15",
+        "usr_pct": 14.24,
+        "sys_pct": 11.53,
+        "irq_pct": 0,
+        "idle_pct": 40.12
+      },
+      {
+        "timestamp": "2026-10-06 13:08:25",
+        "usr_pct": 13.91,
+        "sys_pct": 11.46,
+        "irq_pct": 0,
+        "idle_pct": 41.31
+      },
+      {
+        "timestamp": "2026-10-06 13:08:35",
+        "usr_pct": 13.93,
+        "sys_pct": 13.97,
+        "irq_pct": 0,
+        "idle_pct": 40.11
+      },
+      {
+        "timestamp": "2026-10-06 13:08:45",
+        "usr_pct": 13.82,
+        "sys_pct": 11.44,
+        "irq_pct": 0,
+        "idle_pct": 40.4
+      },
+      {
+        "timestamp": "2026-10-06 13:08:55",
+        "usr_pct": 14.38,
+        "sys_pct": 11.09,
+        "irq_pct": 0,
+        "idle_pct": 41.58
+      },
+      {
+        "timestamp": "2026-10-06 13:09:05",
+        "usr_pct": 16.25,
+        "sys_pct": 11.46,
+        "irq_pct": 0,
+        "idle_pct": 41.78
+      },
+      {
+        "timestamp": "2026-10-06 13:09:15",
+        "usr_pct": 13.24,
+        "sys_pct": 11.91,
+        "irq_pct": 0,
+        "idle_pct": 37.12
+      },
+      {
+        "timestamp": "2026-10-06 13:09:25",
+        "usr_pct": 15.47,
+        "sys_pct": 12.57,
+        "irq_pct": 0,
+        "idle_pct": 37.28
+      },
+      {
+        "timestamp": "2026-10-06 13:09:35",
+        "usr_pct": 13.5,
+        "sys_pct": 13.31,
+        "irq_pct": 0,
+        "idle_pct": 39.69
+      },
+      {
+        "timestamp": "2026-10-06 13:09:45",
+        "usr_pct": 13.43,
+        "sys_pct": 13.25,
+        "irq_pct": 0,
+        "idle_pct": 40.84
+      },
+      {
+        "timestamp": "2026-10-06 13:09:55",
+        "usr_pct": 12.93,
+        "sys_pct": 13.39,
+        "irq_pct": 0,
+        "idle_pct": 40.46
+      },
+      {
+        "timestamp": "2026-10-06 13:10:05",
+        "usr_pct": 12.97,
+        "sys_pct": 13.08,
+        "irq_pct": 0,
+        "idle_pct": 41.2
+      },
+      {
+        "timestamp": "2026-10-06 13:10:15",
+        "usr_pct": 13.54,
+        "sys_pct": 12.65,
+        "irq_pct": 0,
+        "idle_pct": 38.21
+      },
+      {
+        "timestamp": "2026-10-06 13:10:25",
+        "usr_pct": 14.22,
+        "sys_pct": 12.11,
+        "irq_pct": 0,
+        "idle_pct": 39.04
+      },
+      {
+        "timestamp": "2026-10-06 13:10:35",
+        "usr_pct": 12.98,
+        "sys_pct": 14.8,
+        "irq_pct": 0,
+        "idle_pct": 40.51
+      },
+      {
+        "timestamp": "2026-10-06 13:10:45",
+        "usr_pct": 16.26,
+        "sys_pct": 12.24,
+        "irq_pct": 0,
+        "idle_pct": 39.57
+      },
+      {
+        "timestamp": "2026-10-06 13:10:55",
+        "usr_pct": 16.2,
+        "sys_pct": 12.07,
+        "irq_pct": 0,
+        "idle_pct": 37.41
+      },
+      {
+        "timestamp": "2026-10-06 13:11:05",
+        "usr_pct": 17.86,
+        "sys_pct": 12.09,
+        "irq_pct": 0,
+        "idle_pct": 38.69
+      },
+      {
+        "timestamp": "2026-10-06 13:11:15",
+        "usr_pct": 19.1,
+        "sys_pct": 11.81,
+        "irq_pct": 0,
+        "idle_pct": 37.13
+      },
+      {
+        "timestamp": "2026-10-06 13:11:26",
+        "usr_pct": 19.18,
+        "sys_pct": 12.49,
+        "irq_pct": 0,
+        "idle_pct": 37.09
+      },
+      {
+        "timestamp": "2026-10-06 13:11:36",
+        "usr_pct": 17.72,
+        "sys_pct": 11.88,
+        "irq_pct": 0,
+        "idle_pct": 38.66
+      },
+      {
+        "timestamp": "2026-10-06 13:11:46",
+        "usr_pct": 16.98,
+        "sys_pct": 12.29,
+        "irq_pct": 0,
+        "idle_pct": 36.55
+      },
+      {
+        "timestamp": "2026-10-06 13:11:56",
+        "usr_pct": 16.56,
+        "sys_pct": 11,
+        "irq_pct": 0,
+        "idle_pct": 42.19
+      },
+      {
+        "timestamp": "2026-10-06 13:12:06",
+        "usr_pct": 14.08,
+        "sys_pct": 11.96,
+        "irq_pct": 0,
+        "idle_pct": 40.52
+      },
+      {
+        "timestamp": "2026-10-06 13:12:16",
+        "usr_pct": 15.99,
+        "sys_pct": 12.01,
+        "irq_pct": 0,
+        "idle_pct": 39.73
+      },
+      {
+        "timestamp": "2026-10-06 13:12:26",
+        "usr_pct": 14.6,
+        "sys_pct": 12.2,
+        "irq_pct": 0,
+        "idle_pct": 39.5
+      },
+      {
+        "timestamp": "2026-10-06 13:12:36",
+        "usr_pct": 17.56,
+        "sys_pct": 13.51,
+        "irq_pct": 0,
+        "idle_pct": 39.12
+      },
+      {
+        "timestamp": "2026-10-06 13:12:46",
+        "usr_pct": 15.06,
+        "sys_pct": 13.99,
+        "irq_pct": 0,
+        "idle_pct": 39.3
+      },
+      {
+        "timestamp": "2026-10-06 13:12:56",
+        "usr_pct": 13.36,
+        "sys_pct": 11.58,
+        "irq_pct": 0,
+        "idle_pct": 46.2
+      },
+      {
+        "timestamp": "2026-10-06 13:13:08",
+        "usr_pct": 1.15,
+        "sys_pct": 0.37,
+        "irq_pct": 0,
+        "idle_pct": 96
+      },
+      {
+        "timestamp": "2026-10-06 13:13:18",
+        "usr_pct": 0.41,
+        "sys_pct": 1.78,
+        "irq_pct": 0,
+        "idle_pct": 92.58
+      }
+    ],
+    "iops": [
+      {
+        "timestamp": "2026-10-06 13:06:05",
+        "value": 97
+      },
+      {
+        "timestamp": "2026-10-06 13:06:18",
+        "value": 187
+      },
+      {
+        "timestamp": "2026-10-06 13:06:25",
+        "value": 208
+      },
+      {
+        "timestamp": "2026-10-06 13:06:35",
+        "value": 224
+      },
+      {
+        "timestamp": "2026-10-06 13:06:45",
+        "value": 195
+      },
+      {
+        "timestamp": "2026-10-06 13:06:55",
+        "value": 203
+      },
+      {
+        "timestamp": "2026-10-06 13:07:05",
+        "value": 111
+      },
+      {
+        "timestamp": "2026-10-06 13:07:15",
+        "value": 31
+      },
+      {
+        "timestamp": "2026-10-06 13:07:25",
+        "value": 33
+      },
+      {
+        "timestamp": "2026-10-06 13:07:35",
+        "value": 64
+      },
+      {
+        "timestamp": "2026-10-06 13:07:45",
+        "value": 23
+      },
+      {
+        "timestamp": "2026-10-06 13:07:55",
+        "value": 45
+      },
+      {
+        "timestamp": "2026-10-06 13:08:05",
+        "value": 51
+      },
+      {
+        "timestamp": "2026-10-06 13:08:15",
+        "value": 23
+      },
+      {
+        "timestamp": "2026-10-06 13:08:25",
+        "value": 19
+      },
+      {
+        "timestamp": "2026-10-06 13:08:35",
+        "value": 59
+      },
+      {
+        "timestamp": "2026-10-06 13:08:45",
+        "value": 21
+      },
+      {
+        "timestamp": "2026-10-06 13:08:55",
+        "value": 28
+      },
+      {
+        "timestamp": "2026-10-06 13:09:05",
+        "value": 65
+      },
+      {
+        "timestamp": "2026-10-06 13:09:15",
+        "value": 23
+      },
+      {
+        "timestamp": "2026-10-06 13:09:25",
+        "value": 69
+      },
+      {
+        "timestamp": "2026-10-06 13:09:35",
+        "value": 135
+      },
+      {
+        "timestamp": "2026-10-06 13:09:45",
+        "value": 74
+      },
+      {
+        "timestamp": "2026-10-06 13:09:55",
+        "value": 161
+      },
+      {
+        "timestamp": "2026-10-06 13:10:05",
+        "value": 211
+      },
+      {
+        "timestamp": "2026-10-06 13:10:15",
+        "value": 86
+      },
+      {
+        "timestamp": "2026-10-06 13:10:25",
+        "value": 86
+      },
+      {
+        "timestamp": "2026-10-06 13:10:35",
+        "value": 76
+      },
+      {
+        "timestamp": "2026-10-06 13:10:45",
+        "value": 90
+      },
+      {
+        "timestamp": "2026-10-06 13:10:55",
+        "value": 78
+      },
+      {
+        "timestamp": "2026-10-06 13:11:05",
+        "value": 89
+      },
+      {
+        "timestamp": "2026-10-06 13:11:15",
+        "value": 87
+      },
+      {
+        "timestamp": "2026-10-06 13:11:26",
+        "value": 78
+      },
+      {
+        "timestamp": "2026-10-06 13:11:36",
+        "value": 78
+      },
+      {
+        "timestamp": "2026-10-06 13:11:46",
+        "value": 73
+      },
+      {
+        "timestamp": "2026-10-06 13:11:56",
+        "value": 70
+      },
+      {
+        "timestamp": "2026-10-06 13:12:06",
+        "value": 63
+      },
+      {
+        "timestamp": "2026-10-06 13:12:16",
+        "value": 71
+      },
+      {
+        "timestamp": "2026-10-06 13:12:26",
+        "value": 70
+      },
+      {
+        "timestamp": "2026-10-06 13:12:36",
+        "value": 70
+      },
+      {
+        "timestamp": "2026-10-06 13:12:46",
+        "value": 172
+      },
+      {
+        "timestamp": "2026-10-06 13:12:56",
+        "value": 91
+      },
+      {
+        "timestamp": "2026-10-06 13:13:08",
+        "value": 1697
+      },
+      {
+        "timestamp": "2026-10-06 13:13:18",
+        "value": 8603
+      }
+    ],
+    "mbps": [
+      {
+        "timestamp": "2026-10-06 13:06:05",
+        "value": 32.98
+      },
+      {
+        "timestamp": "2026-10-06 13:06:18",
+        "value": 24.97
+      },
+      {
+        "timestamp": "2026-10-06 13:06:25",
+        "value": 11.76
+      },
+      {
+        "timestamp": "2026-10-06 13:06:35",
+        "value": 22.19
+      },
+      {
+        "timestamp": "2026-10-06 13:06:45",
+        "value": 13.27
+      },
+      {
+        "timestamp": "2026-10-06 13:06:55",
+        "value": 18.28
+      },
+      {
+        "timestamp": "2026-10-06 13:07:05",
+        "value": 30.12
+      },
+      {
+        "timestamp": "2026-10-06 13:07:15",
+        "value": 7.61
+      },
+      {
+        "timestamp": "2026-10-06 13:07:25",
+        "value": 6.79
+      },
+      {
+        "timestamp": "2026-10-06 13:07:35",
+        "value": 28.27
+      },
+      {
+        "timestamp": "2026-10-06 13:07:45",
+        "value": 7.46
+      },
+      {
+        "timestamp": "2026-10-06 13:07:55",
+        "value": 8.73
+      },
+      {
+        "timestamp": "2026-10-06 13:08:05",
+        "value": 19.17
+      },
+      {
+        "timestamp": "2026-10-06 13:08:15",
+        "value": 11.52
+      },
+      {
+        "timestamp": "2026-10-06 13:08:25",
+        "value": 12.56
+      },
+      {
+        "timestamp": "2026-10-06 13:08:35",
+        "value": 25.23
+      },
+      {
+        "timestamp": "2026-10-06 13:08:45",
+        "value": 10.49
+      },
+      {
+        "timestamp": "2026-10-06 13:08:55",
+        "value": 9.23
+      },
+      {
+        "timestamp": "2026-10-06 13:09:05",
+        "value": 18.93
+      },
+      {
+        "timestamp": "2026-10-06 13:09:15",
+        "value": 13.38
+      },
+      {
+        "timestamp": "2026-10-06 13:09:25",
+        "value": 33.92
+      },
+      {
+        "timestamp": "2026-10-06 13:09:35",
+        "value": 8.12
+      },
+      {
+        "timestamp": "2026-10-06 13:09:45",
+        "value": 18.28
+      },
+      {
+        "timestamp": "2026-10-06 13:09:55",
+        "value": 18.64
+      },
+      {
+        "timestamp": "2026-10-06 13:10:05",
+        "value": 27.69
+      },
+      {
+        "timestamp": "2026-10-06 13:10:15",
+        "value": 11.46
+      },
+      {
+        "timestamp": "2026-10-06 13:10:25",
+        "value": 22.86
+      },
+      {
+        "timestamp": "2026-10-06 13:10:35",
+        "value": 22.24
+      },
+      {
+        "timestamp": "2026-10-06 13:10:45",
+        "value": 31.3
+      },
+      {
+        "timestamp": "2026-10-06 13:10:55",
+        "value": 10.88
+      },
+      {
+        "timestamp": "2026-10-06 13:11:05",
+        "value": 7.39
+      },
+      {
+        "timestamp": "2026-10-06 13:11:15",
+        "value": 10.16
+      },
+      {
+        "timestamp": "2026-10-06 13:11:26",
+        "value": 33.09
+      },
+      {
+        "timestamp": "2026-10-06 13:11:36",
+        "value": 9.05
+      },
+      {
+        "timestamp": "2026-10-06 13:11:46",
+        "value": 13.18
+      },
+      {
+        "timestamp": "2026-10-06 13:11:56",
+        "value": 19.49
+      },
+      {
+        "timestamp": "2026-10-06 13:12:06",
+        "value": 10.26
+      },
+      {
+        "timestamp": "2026-10-06 13:12:16",
+        "value": 9.31
+      },
+      {
+        "timestamp": "2026-10-06 13:12:26",
+        "value": 27.24
+      },
+      {
+        "timestamp": "2026-10-06 13:12:36",
+        "value": 9.43
+      },
+      {
+        "timestamp": "2026-10-06 13:12:46",
+        "value": 28.83
+      },
+      {
+        "timestamp": "2026-10-06 13:12:56",
+        "value": 16.35
+      },
+      {
+        "timestamp": "2026-10-06 13:13:08",
+        "value": 54.59
+      },
+      {
+        "timestamp": "2026-10-06 13:13:18",
+        "value": 418.29
+      }
+    ]
+  },
+  "submission": {
+    "github_username": "ls250",
+    "description": "test",
+    "company": {
+      "name": "",
+      "logo_url": "",
+      "description": ""
+    },
+    "workload": {
+      "classification": "unclassified",
+      "use_all_warehouses": null,
+      "durability": "unknown",
+      "details": ""
+    }
+  }
+}
