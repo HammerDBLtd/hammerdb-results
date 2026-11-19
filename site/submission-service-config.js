@@ -11,6 +11,7 @@ window.HammerDBSubmissionAPI = Object.freeze({
 window.HammerDBSubmissionHandoff = Object.freeze({
   allowedOrigins: Object.freeze([
     "http://localhost:18093", "http://127.0.0.1:18093",
-    "http://localhost:18094", "http://127.0.0.1:18094"
+    "http://localhost:18094", "http://127.0.0.1:18094",
+    "http://localhost:18194", "http://127.0.0.1:18194"
   ])
 });
