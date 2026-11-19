@@ -267,13 +267,13 @@ test('direct transfer preserves an administrator-disabled automatic route',async
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict'),{createHash}=require('node:crypto');
 const receiver=require('../site/submission-handoff.js');
-function fixture(){
+function fixture(origin='http://localhost:18093'){
  const nonce='b'.repeat(64),raw='{"result":{"nopm":1234.5}}',hash=createHash('sha256').update(raw).digest('hex');
  const events=new Map(),replies=[],loads=[],timers=new Map();let timeout=0;
  const source={postMessage:(message,origin)=>replies.push({message,origin})};
  const win={location:{href:'https://hammerdbltd.github.io/hammerdb-results/submit.html?handoff='+nonce},addEventListener:(name,fn)=>events.set(name,fn),removeEventListener:name=>events.delete(name),setTimeout:fn=>{timers.set(++timeout,fn);return timeout;},clearTimeout:id=>timers.delete(id)};
- const stop=receiver.receive({window:win,allowedOrigins:['http://localhost:18093'],crypto:globalThis.crypto,load:async text=>loads.push(text)});
- const send=async(stage,extra={})=>events.get('message')?.({origin:'http://localhost:18093',source,data:{type:'hammerdb-result-handoff',version:1,nonce,stage,raw,sha256:hash},...extra});
+ const stop=receiver.receive({window:win,allowedOrigins:[origin],crypto:globalThis.crypto,load:async text=>loads.push(text)});
+ const send=async(stage,extra={})=>events.get('message')?.({origin,source,data:{type:'hammerdb-result-handoff',version:1,nonce,stage,raw,sha256:hash},...extra});
  return {win,source,raw,hash,replies,loads,events,timers,stop,send,nonce};
 }
 test('receiver accepts one checked exact-text draft and never submits it',async()=>{
@@ -281,6 +281,13 @@ test('receiver accepts one checked exact-text draft and never submits it',async(
  await f.send('hello');assert.equal(f.replies[0].message.stage,'ready');assert.equal(f.replies[0].origin,'http://localhost:18093');
  await f.send('artifact');assert.deepEqual(f.loads,[f.raw]);assert.equal(f.replies.at(-1).message.stage,'accepted');assert.equal(f.replies.at(-1).message.sha256,f.hash);assert.equal(f.events.size,0);
 });
+test('AWS SSH test origins accept reviewed drafts with the same checks',async()=>{
+ for(const origin of ['http://localhost:18194','http://127.0.0.1:18194']){
+  const f=fixture(origin);await f.send('hello');await f.send('artifact');
+  assert.deepEqual(f.loads,[f.raw]);assert.equal(f.replies.at(-1).origin,origin);
+ }
+});
+
 test('wrong origins, token, window and checksum cannot load a result',async()=>{
  const f=fixture();await f.send('hello',{origin:'https://wrong.example'});await f.send('hello',{data:{type:'hammerdb-result-handoff',version:1,nonce:'wrong',stage:'hello'}});assert.equal(f.replies.length,0);
  await f.send('hello');await f.send('artifact',{source:{postMessage(){throw Error('Wrong source');}}});assert.equal(f.loads.length,0);
