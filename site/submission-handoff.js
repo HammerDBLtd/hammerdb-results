@@ -11,14 +11,16 @@
     const origins=new Set(allowedOrigins.filter(origin=>{
       try{const url=new URL(origin);return url.origin===origin&&(url.protocol==='https:'||url.protocol==='http:'&&['localhost','127.0.0.1'].includes(url.hostname));}catch{return false;}
     }));
-    let sender=null,sourceOrigin='',used=false;
+    let sender=null,sourceOrigin='',used=false,stopped=false;
     const timer=win.setTimeout(stop,120000);
-    function stop(){win.removeEventListener('message',message);win.clearTimeout(timer);}
+    function stop(){stopped=true;win.removeEventListener('message',message);win.clearTimeout(timer);}
     function reply(stage,sha256){sender.postMessage({type:'hammerdb-result-handoff',version:1,nonce,stage,...(sha256?{sha256}:{})},sourceOrigin);}
     async function message(event){
       const data=event.data;
-      if(!origins.has(event.origin)||!event.source||event.source===win||!data||data.type!=='hammerdb-result-handoff'||data.version!==1||data.nonce!==nonce)return;
-      if(sender&&event.source!==sender)return;
+      let cloudfront=false;
+      try{const url=new URL(event.origin);cloudfront=url.origin===event.origin&&url.protocol==='https:'&&url.port===''&&url.hostname.endsWith('.cloudfront.net');}catch{}
+      if(stopped||(!origins.has(event.origin)&&!cloudfront)||!event.source||event.source===win||!data||data.type!=='hammerdb-result-handoff'||data.version!==1||data.nonce!==nonce)return;
+      if(sender&&(event.source!==sender||event.origin!==sourceOrigin))return;
       if(data.stage==='hello'&&!used){sender=event.source;sourceOrigin=event.origin;reply('ready');return;}
       if(data.stage!=='artifact'||!sender||used)return;
       used=true;

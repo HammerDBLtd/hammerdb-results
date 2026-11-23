@@ -267,15 +267,38 @@ test('direct transfer preserves an administrator-disabled automatic route',async
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict'),{createHash}=require('node:crypto');
 const receiver=require('../site/submission-handoff.js');
-function fixture(origin='http://localhost:18093'){
+function fixture(origin='http://localhost:18093',allowedOrigins=[origin]){
  const nonce='b'.repeat(64),raw='{"result":{"nopm":1234.5}}',hash=createHash('sha256').update(raw).digest('hex');
  const events=new Map(),replies=[],loads=[],timers=new Map();let timeout=0;
  const source={postMessage:(message,origin)=>replies.push({message,origin})};
  const win={location:{href:'https://hammerdbltd.github.io/hammerdb-results/submit.html?handoff='+nonce},addEventListener:(name,fn)=>events.set(name,fn),removeEventListener:name=>events.delete(name),setTimeout:fn=>{timers.set(++timeout,fn);return timeout;},clearTimeout:id=>timers.delete(id)};
- const stop=receiver.receive({window:win,allowedOrigins:[origin],crypto:globalThis.crypto,load:async text=>loads.push(text)});
+ const stop=receiver.receive({window:win,allowedOrigins,crypto:globalThis.crypto,load:async text=>loads.push(text)});
  const send=async(stage,extra={})=>events.get('message')?.({origin,source,data:{type:'hammerdb-result-handoff',version:1,nonce,stage,raw,sha256:hash},...extra});
  return {win,source,raw,hash,replies,loads,events,timers,stop,send,nonce};
 }
+test('changing CloudFront hosts transfer without any additional user prompt',async()=>{
+ assert.ok(!html.includes('transfer-consent'));assert.ok(!html.includes('requestApproval'));
+ for(const origin of ['https://d123example.cloudfront.net','https://d456example.cloudfront.net']){
+  const f=fixture(origin,[]);await f.send('artifact');assert.equal(f.loads.length,0);
+  await f.send('hello');assert.equal(f.replies.at(-1).message.stage,'ready');assert.equal(f.replies.at(-1).origin,origin);
+  await f.send('artifact',{origin:'https://other.cloudfront.net'});assert.equal(f.loads.length,0);
+  await f.send('artifact',{source:{postMessage(){throw Error('wrong window');}}});assert.equal(f.loads.length,0);
+  await f.send('artifact');await f.send('artifact');assert.deepEqual(f.loads,[f.raw]);
+ }
+});
+test('CloudFront rule rejects HTTP, lookalikes, other domains and nonstandard ports',async()=>{
+ for(const origin of ['http://d123.cloudfront.net','https://cloudfront.net','https://fakecloudfront.net','https://d123.cloudfront.net.evil.example','https://d123.cloudfront.net:8443','https://custom.example','null','http://localhost:19999']){
+  const f=fixture(origin,[]);await f.send('hello');await f.send('artifact');assert.equal(f.replies.length,0,origin);assert.equal(f.loads.length,0);f.stop();
+ }
+});
+test('CloudFront transfers retain expiry, checksum, size and validation checks',async()=>{
+ const expired=fixture('https://d123.cloudfront.net',[]);for(const fn of expired.timers.values())fn();await expired.send('hello');assert.equal(expired.replies.length,0);
+ for(const raw of ['x'.repeat(2000001),'{"result":0}']){
+  const f=fixture('https://d123.cloudfront.net',[]);await f.send('hello');
+  await f.send('artifact',{data:{type:'hammerdb-result-handoff',version:1,nonce:f.nonce,stage:'artifact',raw,sha256:f.hash}});
+  assert.equal(f.loads.length,0);assert.equal(f.replies.at(-1).message.stage,'rejected');
+ }
+});
 test('receiver accepts one checked exact-text draft and never submits it',async()=>{
  const f=fixture();await f.send('artifact');assert.equal(f.loads.length,0);
  await f.send('hello');assert.equal(f.replies[0].message.stage,'ready');assert.equal(f.replies[0].origin,'http://localhost:18093');
