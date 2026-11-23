@@ -16,6 +16,7 @@
   <script src="repository-context.js"></script>
   <script src="repository.js"></script>
   <script src="submission-service-config.js"></script>
+  <script src="submission-handoff.js"></script>
   <link rel="stylesheet" href="leaderboard.css">
   <style>
     .submit-branding{display:grid;grid-template-columns:105px minmax(0,1fr) 105px;align-items:center;gap:18px}.submit-branding h1{font-size:30px;line-height:1.15;margin:0 0 9px}.submit-branding .masthead-logo-white{height:90px;min-height:90px}.submit-branding .masthead-logo-white img{max-width:100%;max-height:72px;object-fit:contain}@media(max-width:630px){.submit-branding{grid-template-columns:64px 64px;gap:10px}.submit-branding>div{grid-column:1/-1;grid-row:2}.submit-branding .masthead-logo-white{height:70px;min-height:70px}}
@@ -81,7 +82,7 @@
   <div class="submit-flow">
     <div class="flow-main">
       <section class="submit-panel"><div class="panel-title"><span class="step-index">1</span><div><h2>Select your result artifact</h2><p>Use the JSON downloaded from HammerDB. The benchmark data and configuration are preserved.</p></div></div>
-        <div id="drop-zone" class="upload-zone"><div class="upload-icon" aria-hidden="true">⇧</div><strong>Drop your JSON artifact here</strong><p>or choose a file from your computer</p><button type="button" class="file-choose" id="choose-file">Choose JSON artifact</button><input id="artifact-file" type="file" accept="application/json,.json" hidden></div>
+        <div id="drop-zone" class="upload-zone"><div class="upload-icon" aria-hidden="true">⇧</div><strong id="artifact-load-title">Drop your JSON artifact here</strong><p id="artifact-load-hint">or choose a file from your computer</p><button type="button" class="file-choose" id="choose-file">Choose JSON artifact</button><input id="artifact-file" type="file" accept="application/json,.json" hidden></div>
         <div id="preview" hidden><div class="preview-stats" id="preview-data"></div><p class="field-note">Result location: <code id="result-path"></code></p></div>
       </section>
       <section class="submit-panel" id="details-section" hidden><div class="panel-title"><span class="step-index">2</span><div><h2>Who is submitting this result?</h2><p>Attribution is shown on the leaderboard and links directly to the submitter's GitHub profile.</p></div></div>
@@ -223,17 +224,25 @@
     if (response.ok) return true;
     throw Error("GitHub returned HTTP " + response.status);
   }
+  function resultLoaded(source, job) {
+    $("artifact-load-title").textContent = source === "transfer" ? "Result received from HammerDB" : "Result loaded";
+    $("artifact-load-hint").textContent = "Job " + job.jobid + " is ready to review. Choosing another result is optional.";
+    $("choose-file").textContent = "Choose a different result";
+  }
   function reset() {
     // A previous OAuth navigation may have disabled Submit; never carry that
     // disabled state into a newly uploaded artifact.
     $("continue-github").disabled = false;
     artifact = null; resultPath = ""; ready = false; validationId++;
+    $("artifact-load-title").textContent = "Drop your JSON artifact here";
+    $("artifact-load-hint").textContent = "or choose a file from your computer";
+    $("choose-file").textContent = "Choose JSON artifact";
     $("preview").hidden = true;
     ["details-section", "workload-section", "submit-section"].forEach((id) => $(id).hidden = true);
     fields.forEach((id) => { if ($(id).tagName === "SELECT") $(id).selectedIndex = 0; else $(id).value = ""; });
     $("generated-json").textContent = "Select an artifact to preview.";
   }
-  async function loadArtifact(raw) {
+  async function loadArtifact(raw, { source = "file" } = {}) {
     reset();
     const id = validationId;
     let parsed;
@@ -260,6 +269,7 @@
       if (id !== validationId) return;
       if (exists) { status("Result already exists", "The artifact is already published under this job ID. Use a new result or update it by reviewing the existing file.", "error"); return; }
       ready = true;
+      resultLoaded(source, job);
       $("details-section").hidden = false;
       $("workload-section").hidden = job.benchmark !== "TPROC-C";
       $("submit-section").hidden = false;
@@ -410,6 +420,18 @@
     } catch(error) {
       button.disabled = false;
       status("Submission not sent", error.message + ". Your completed form is still here.", "error");
+    }
+  });
+  window.HammerDBResultHandoff?.receive({
+    allowedOrigins: window.HammerDBSubmissionHandoff?.allowedOrigins || [],
+    status,
+    load: async (raw) => {
+      await loadArtifact(raw, { source: "transfer" });
+      if (!ready || JSON.stringify(artifact) !== JSON.stringify(JSON.parse(raw))) throw Error("The transferred result did not pass validation.");
+      const automatic = Boolean(String(window.HammerDBSubmissionAPI?.endpoint || "").trim()) && !$("pr-auto").disabled;
+      $("pr-auto").checked = automatic;
+      $("pr-manual").checked = !automatic;
+      updatePrMode();
     }
   });
   const artifactUrl = new URLSearchParams(location.search).get("artifact_url");
